@@ -29,9 +29,11 @@ func (l *Lexer) forward() {
 	l.curr += 1
 }
 
+/*
 func (l *Lexer) backward() {
 	l.curr -= 1
 }
+*/
 
 func (l *Lexer) begin(t int) {
 	l.cmark = uint(int(l.curr) + t)
@@ -469,6 +471,8 @@ func (l *Lexer) Tokenize() TokenStream {
 				ttype = KBreak
 			case "continue":
 				ttype = KContinue
+			case "return":
+				ttype = KReturn
 			case "int":
 				ttype = KTInt
 			case "float":
@@ -498,6 +502,11 @@ func (l *Lexer) Tokenize() TokenStream {
 			utils.Exit(1)
 		}
 	}
+	tokens = append(tokens, Token{
+		ttype: EoF,
+		value: "",
+		where: l.here(),
+	})
 	return TokenStream{
 		tokens: tokens, curr: 0,
 	}

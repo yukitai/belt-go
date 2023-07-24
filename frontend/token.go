@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"belt/reporter"
+	"belt/utils"
 	"fmt"
 	"strconv"
 	"strings"
@@ -35,6 +36,7 @@ const (
 	KLet      // 🎀 let
 	KBreak    // 🎀 break
 	KContinue // 🎀 continue
+	KReturn // 🎀 return
 
 	KTInt     // 🎀 int
 	KTFloat   // 🎀 float
@@ -83,6 +85,73 @@ const (
 	LBra      // 🎀 {
 	RBra      // 🎀 }
 )
+
+var TokenStringMap = map[TokenType]string{
+	EoF: "eof",
+	Ident: "identifier",
+	LlInt: "literal integer",
+	LlFloat: "literal float",
+	LlString: "literal string",
+	LlBool: "literal boolean",
+	LlNil: "literal nil",
+	KFn: "keyword fn",
+	KIf: "keyword if",
+	KElse: "keyword else",
+	KWhile: "keyword while",
+	KFor: "keyword for",
+	KIn: "keyword in",
+	KLet: "keyword let",
+	KBreak: "keyword break",
+	KContinue: "keyword continue",
+	KReturn: "keyword return",
+	KTInt: "type `int`",
+	KTFloat: "type `float`",
+	KTString: "type `string`",
+	KTBool: "type `bool`",
+	KTVar: "type variable",
+	OAdd: "operator +",
+	OAddf: "operator +.",
+	OConnect: "operator ++",
+	OSub: "operator -",
+	OSubf: "operator -.",
+	OMul: "operator *",
+	OMulf: "operator *.",
+	ODiv: "operator /",
+	ODivf: "operator /.",
+	OEq: "operator ==",
+	ONeq: "operator !=",
+	OGrt: "operator >",
+	OGeq: "operator >=",
+	OLes: "operator <",
+	OLeq: "operator <=",
+	OAnd: "operator &&",
+	OOr: "operator ||",
+	OBXor: "operator ^",
+	OBAnd: "operator &",
+	OBOr: "operator |",
+	ONot: "operator !",
+	OBNot: "operator ~",
+	OMovl: "operator <<",
+	OMovr: "operator >>",
+	OMember: "operator .",
+	OLookup: "operator ::",
+	OAssign: "operator =",
+	Colon: "colon",
+	Comma: "comma",
+	Semi: "semi",
+	ThinArr: "thin arrow",
+	FatArr: "fat arrow",
+	LBrace: "left brace",
+	RBrace: "right brace",
+	LBracket: "left square bracket",
+	RBracket: "right square bracket",
+	LBra: "left bracket",
+	RBra: "right bracket",
+}
+
+func (tt *TokenType) ToString() string {
+	return TokenStringMap[*tt]
+}
 
 type TokenCastError struct {
 	token *Token
@@ -159,17 +228,32 @@ func (ts *TokenStream) Backward() {
 	ts.curr -= 1;
 }
 
-func (ts *TokenStream) IsEoF() bool {
+func (ts *TokenStream) IsEof() bool {
 	return ts.Peek().ttype == EoF
 }
 
-func (ts *TokenStream) AssertNext(tt TokenType) bool {
+func (ts *TokenStream) AssertNext(tt TokenType) *Token {
 	tok := ts.Peek()
 	if tok.ttype == tt {
 		ts.Forward()
-		return true
+		return &tok
 	}
-	return false
+	return nil
+}
+
+func (ts *TokenStream) AssertNextOrReport(tt TokenType, file *utils.File) Token {
+	tok := ts.Peek()
+	if tok.ttype == tt {
+		ts.Forward()
+		return tok
+	}
+	err := reporter.Error(
+		tok.where,
+		fmt.Sprintf("expected %v, found %v", tt.ToString(), tok.ttype.ToString()),
+	)
+	reporter.Report(&err, file)
+	utils.Exit(1)
+	panic("reaching an unreachable code! something went wrong") // unreachable
 }
 
 func (ts *TokenStream) ToString() string {
@@ -178,7 +262,7 @@ func (ts *TokenStream) ToString() string {
 		tok := ts.tokens[i]
 		switch tok.ttype {
 		case LlString:
-			res = append(res, "\"", tok.value, "\"")
+			res = append(res, fmt.Sprintf("\"%v\"", tok.value))
 		default:
 			res = append(res, tok.value)
 		}
