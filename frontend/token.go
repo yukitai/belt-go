@@ -4,6 +4,7 @@ import (
 	"belt/reporter"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type TokenType int
@@ -17,68 +18,70 @@ type Token struct {
 const (
 	EoF TokenType = iota
 
-	Ident     // ([_a-zA-Z][_a-zA-Z0-9]*)
+	Ident     // 🎀 ([_a-zA-Z][_a-zA-Z0-9]*)
 
-	LlInt     // ([0-9]+)
-    LlFloat   // ([0-9]+\.[0-9]*)
-	LlString  // "(.*)"
-	LlBool    // (true)|(false)
-	LlNil     // nil
+	LlInt     // 🎀 ([0-9]+)
+    LlFloat   // 🎀 ([0-9]+\.[0-9]*)
+	LlString  // 🎀 "(.*)"
+	LlBool    // 🎀 (true)|(false)
+	LlNil     // 🎀 nil
 
-	KFn       // fn
-	KIf       // if
-	KElse     // else
-	KWhile    // while
-	KFor      // for
-	KIn       // in
-	KLet      // let
-	KBreak    // break
-	KContinue // continue
+	KFn       // 🎀 fn
+	KIf       // 🎀 if
+	KElse     // 🎀 else
+	KWhile    // 🎀 while
+	KFor      // 🎀 for
+	KIn       // 🎀 in
+	KLet      // 🎀 let
+	KBreak    // 🎀 break
+	KContinue // 🎀 continue
 
-	KTInt     // int
-	KTFloat   // float
-	KTString  // string
-	KTBool    // bool
-	KTVar     // '<Ident>
+	KTInt     // 🎀 int
+	KTFloat   // 🎀 float
+	KTString  // 🎀 string
+	KTBool    // 🎀 bool
+	KTVar     // 🎀 '<Ident>
 
-	OAdd      // +
-	OAddf     // +.
-	OConnect  // ++
-	OSub      // -
-	OSubf     // -.
-	OMul      // *
-	OMulf     // *.
-	ODiv      // /
-	ODivf     // /.
-	OEq       // ==
-	ONeq	  // !=
-	OGrt      // >
-	OGeq      // >=
-	OLes      // <
-	OLeq      // <=
-	OAnd      // &&
-	OOr       // ||
-	OBXor      // ^
-	OBAnd     // &
-	OBOr      // |
-	ONot      // !
-	OBNot     // ~
-	OMovl     // <<
-	OMovr     // >>
-	OMember   // .
-	OLookup   // ::
-	OAssign   // =
+	OAdd      // 🎀 +
+	OAddf     // 🎀 +.
+	OConnect  // 🎀 ++
+	OSub      // 🎀 -
+	OSubf     // 🎀 -.
+	OMul      // 🎀 *
+	OMulf     // 🎀 *.
+	ODiv      // 🎀 /
+	ODivf     // 🎀 /.
+	OEq       // 🎀 ==
+	ONeq	  // 🎀 !=
+	OGrt      // 🎀 >
+	OGeq      // 🎀 >=
+	OLes      // 🎀 <
+	OLeq      // 🎀 <=
+	OAnd      // 🎀 &&
+	OOr       // 🎀 ||
+	OBXor     // 🎀 ^
+	OBAnd     // 🎀 &
+	OBOr      // 🎀 |
+	ONot      // 🎀 !
+	OBNot     // 🎀 ~
+	OMovl     // 🎀 <<
+	OMovr     // 🎀 >>
+	OMember   // 🎀 .
+	OLookup   // 🎀 ::
+	OAssign   // 🎀 =
 
-	Colon     // :
-	Comma     // ,
-	Semi      // ;
+	Colon     // 🎀 :
+	Comma     // 🎀 ,
+	Semi      // 🎀 ;
+	ThinArr   // 🎀 ->
+	FatArr    // 🎀 =>
 
-	LBrace    // (
-	RBrace    // )
-	LBracket  // [
-	RBracket  // ]
-	LBra      // {
-	Rbra      // }
+	LBrace    // 🎀 (
+	RBrace    // 🎀 )
+	LBracket  // 🎀 [
+	RBracket  // 🎀 ]
+	LBra      // 🎀 {
+	RBra      // 🎀 }
 )
 
 type TokenCastError struct {
@@ -167,4 +170,18 @@ func (ts *TokenStream) AssertNext(tt TokenType) bool {
 		return true
 	}
 	return false
+}
+
+func (ts *TokenStream) ToString() string {
+	res := make([]string, 0)
+	for i := range(ts.tokens) {
+		tok := ts.tokens[i]
+		switch tok.ttype {
+		case LlString:
+			res = append(res, "\"", tok.value, "\"")
+		default:
+			res = append(res, tok.value)
+		}
+	}
+	return strings.Join(res, " ")
 }

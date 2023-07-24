@@ -1,6 +1,6 @@
 package reporter
 
-import "belt/compiler"
+import "belt/utils"
 
 type ReportLevel int
 
@@ -16,10 +16,10 @@ var RecieveReportLevel = LHelp
 
 type Reporter interface {
 	Level() ReportLevel
-	Report(*compiler.File)
+	Report(*utils.File)
 }
 
-func Report(reporter Reporter, f *compiler.File) {
+func Report(reporter Reporter, f *utils.File) {
 	level := reporter.Level()
 	if level > RecieveReportLevel {
 		return

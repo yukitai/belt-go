@@ -1,0 +1,5 @@
+fn main() {
+    let a = 114
+    let b = 514
+    a + b
+}
