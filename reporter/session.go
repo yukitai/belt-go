@@ -1,7 +1,7 @@
 package reporter
 
 import (
-	"belt/compiler"
+	"belt/utils"
 	"fmt"
 	"strings"
 	"github.com/fatih/color"
@@ -9,10 +9,10 @@ import (
 
 type Session struct {
 	where Where
-	file *compiler.File
+	file *utils.File
 }
 
-func SessionNew(where Where, file *compiler.File) Session {
+func SessionNew(where Where, file *utils.File) Session {
 	return Session {
 		where, file,
 	}
