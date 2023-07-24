@@ -256,7 +256,7 @@ func (a *AstExprVar) Debug(x uint) {
 
 type AstExprOp2 struct {
 	Lhs AstExpr
-	Tok_op *Token
+	Op *Token
 	Rhs AstExpr
 }
 
@@ -268,7 +268,7 @@ func (a *AstExprOp2) Debug(x uint) {
 	ident(x)
 	fmt.Printf("AstExprOperator 2\n")
 	a.Lhs.Debug(x + 1)
-	debug_token(x + 1, a.Tok_op)
+	debug_token(x + 1, a.Op)
 	a.Rhs.Debug(x + 1)
 }
 

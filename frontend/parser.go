@@ -117,6 +117,250 @@ func (p *Parser) ParseReturnStmt() AstReturnStmt {
 }
 
 func (p *Parser) ParseExpr() AstExpr {
+	return p.ParseExprOr()
+}
+
+func (p *Parser) ParseExprOr() AstExpr {
+	lhs := p.ParseExprAnd()
+loop:
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		switch tok.ttype {
+		case OOr:
+			p.tokens.Forward()
+			rhs := p.ParseExprAnd()
+			lhs = AstExpr{
+				Etype: ANEOp2,
+				Item: &AstExprOp2{
+					Lhs: lhs,
+					Op: &tok,
+					Rhs: rhs,
+				},
+			}
+		default:
+			break loop
+		}
+	}
+	return lhs
+}
+
+func (p *Parser) ParseExprAnd() AstExpr {
+	lhs := p.ParseExprBOr()
+loop:
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		switch tok.ttype {
+		case OAnd:
+			p.tokens.Forward()
+			rhs := p.ParseExprBOr()
+			lhs = AstExpr{
+				Etype: ANEOp2,
+				Item: &AstExprOp2{
+					Lhs: lhs,
+					Op: &tok,
+					Rhs: rhs,
+				},
+			}
+		default:
+			break loop
+		}
+	}
+	return lhs
+}
+
+func (p *Parser) ParseExprBOr() AstExpr {
+	lhs := p.ParseExprBXor()
+loop:
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		switch tok.ttype {
+		case OBOr:
+			p.tokens.Forward()
+			rhs := p.ParseExprBXor()
+			lhs = AstExpr{
+				Etype: ANEOp2,
+				Item: &AstExprOp2{
+					Lhs: lhs,
+					Op: &tok,
+					Rhs: rhs,
+				},
+			}
+		default:
+			break loop
+		}
+	}
+	return lhs
+}
+
+func (p *Parser) ParseExprBXor() AstExpr {
+	lhs := p.ParseExprBAnd()
+loop:
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		switch tok.ttype {
+		case OBXor:
+			p.tokens.Forward()
+			rhs := p.ParseExprBAnd()
+			lhs = AstExpr{
+				Etype: ANEOp2,
+				Item: &AstExprOp2{
+					Lhs: lhs,
+					Op: &tok,
+					Rhs: rhs,
+				},
+			}
+		default:
+			break loop
+		}
+	}
+	return lhs
+}
+
+func (p *Parser) ParseExprBAnd() AstExpr {
+	lhs := p.ParseExprEqual()
+loop:
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		switch tok.ttype {
+		case OBAnd:
+			p.tokens.Forward()
+			rhs := p.ParseExprEqual()
+			lhs = AstExpr{
+				Etype: ANEOp2,
+				Item: &AstExprOp2{
+					Lhs: lhs,
+					Op: &tok,
+					Rhs: rhs,
+				},
+			}
+		default:
+			break loop
+		}
+	}
+	return lhs
+}
+
+func (p *Parser) ParseExprEqual() AstExpr {
+	lhs := p.ParseExprCompare()
+loop:
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		switch tok.ttype {
+		case OEq, ONeq:
+			p.tokens.Forward()
+			rhs := p.ParseExprCompare()
+			lhs = AstExpr{
+				Etype: ANEOp2,
+				Item: &AstExprOp2{
+					Lhs: lhs,
+					Op: &tok,
+					Rhs: rhs,
+				},
+			}
+		default:
+			break loop
+		}
+	}
+	return lhs
+}
+
+func (p *Parser) ParseExprCompare() AstExpr {
+	lhs := p.ParseExprMov()
+loop:
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		switch tok.ttype {
+		case OLes, OLeq, OGrt, OGeq:
+			p.tokens.Forward()
+			rhs := p.ParseExprMov()
+			lhs = AstExpr{
+				Etype: ANEOp2,
+				Item: &AstExprOp2{
+					Lhs: lhs,
+					Op: &tok,
+					Rhs: rhs,
+				},
+			}
+		default:
+			break loop
+		}
+	}
+	return lhs
+}
+
+func (p *Parser) ParseExprMov() AstExpr {
+	lhs := p.ParseExprAdd()
+loop:
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		switch tok.ttype {
+		case OMovl, OMovr:
+			p.tokens.Forward()
+			rhs := p.ParseExprAdd()
+			lhs = AstExpr{
+				Etype: ANEOp2,
+				Item: &AstExprOp2{
+					Lhs: lhs,
+					Op: &tok,
+					Rhs: rhs,
+				},
+			}
+		default:
+			break loop
+		}
+	}
+	return lhs
+}
+
+func (p *Parser) ParseExprAdd() AstExpr {
+	lhs := p.ParseExprMul()
+loop:
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		switch tok.ttype {
+		case OAdd, OAddf, OSub, OSubf, OConnect:
+			p.tokens.Forward()
+			rhs := p.ParseExprMul()
+			lhs = AstExpr{
+				Etype: ANEOp2,
+				Item: &AstExprOp2{
+					Lhs: lhs,
+					Op: &tok,
+					Rhs: rhs,
+				},
+			}
+		default:
+			break loop
+		}
+	}
+	return lhs
+}
+
+func (p *Parser) ParseExprMul() AstExpr {
+	lhs := p.ParseExprUnary()
+loop:
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		switch tok.ttype {
+		case OMul, OMulf, ODiv, ODivf:
+			p.tokens.Forward()
+			rhs := p.ParseExprUnary()
+			lhs = AstExpr{
+				Etype: ANEOp2,
+				Item: &AstExprOp2{
+					Lhs: lhs,
+					Op: &tok,
+					Rhs: rhs,
+				},
+			}
+		default:
+			break loop
+		}
+	}
+	return lhs
+}
+
+func (p *Parser) ParseExprUnary() AstExpr {
 	return p.ParseExprBinary()
 }
 
