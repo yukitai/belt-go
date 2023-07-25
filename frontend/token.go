@@ -209,14 +209,14 @@ type TokenStream struct {
 	curr uint
 }
 
-func (ts *TokenStream) Next() Token {
-	res := ts.tokens[ts.curr]
+func (ts *TokenStream) Next() *Token {
+	res := &ts.tokens[ts.curr]
 	ts.curr += 1
 	return res
 }
 
-func (ts *TokenStream) Peek() Token {
-	res := ts.tokens[ts.curr]
+func (ts *TokenStream) Peek() *Token {
+	res := &ts.tokens[ts.curr]
 	return res
 }
 
@@ -236,12 +236,12 @@ func (ts *TokenStream) AssertNext(tt TokenType) *Token {
 	tok := ts.Peek()
 	if tok.ttype == tt {
 		ts.Forward()
-		return &tok
+		return tok
 	}
 	return nil
 }
 
-func (ts *TokenStream) AssertNextOrReport(tt TokenType, file *utils.File) Token {
+func (ts *TokenStream) AssertNextOrReport(tt TokenType, file *utils.File) *Token {
 	tok := ts.Peek()
 	if tok.ttype == tt {
 		ts.Forward()

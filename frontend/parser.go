@@ -58,12 +58,67 @@ func (p *Parser) ParseStmt() AstStmt {
 			Stype: ANSExpr,
 			Item: &stmt,
 		}
+	case KFn:
+		stmt := p.ParseFndeclStmt()
+		return AstStmt{
+			Stype: ANSFndecl,
+			Item: &stmt,
+		}
 	default:
 		expr := p.ParseExpr()
 		return AstStmt{
 			Stype: ANSExpr,
 			Item: &expr,
 		}
+	}
+}
+
+func (p *Parser) ParseFndeclStmt() AstFnDecl {
+	tok_fn := p.tokens.Next()
+	name := p.tokens.AssertNext(Ident)
+	tok_lbrace := p.tokens.AssertNextOrReport(LBrace, p.file)
+	args := make([]AstFnArg, 0)
+	var tok_rbrace *Token
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		if tok.ttype == RBrace {
+			tok_rbrace = tok
+			p.tokens.Forward()
+			break
+		}
+		aname := p.tokens.AssertNextOrReport(Ident, p.file)
+		tok_colon := p.tokens.AssertNext(Colon)
+		var atype AstValType
+		if tok_colon != nil {
+			atype = p.ParseValType()
+		} else {
+			atype = ANTUnknownNew()
+		}
+		tok_comma := p.tokens.AssertNext(Comma)
+		args = append(args, AstFnArg{
+			Name: aname,
+			Tok_colon: tok_colon,
+			Atype: atype,
+			Tok_comma: tok_comma,
+		})
+	}
+	tok_thinarr := p.tokens.AssertNext(ThinArr)
+	var ret_t AstValType
+	if tok_thinarr != nil {
+		ret_t = p.ParseValType()
+	} else {
+		ret_t = ANTUnknownNew()
+	}
+	body := p.ParseBlock()
+	return AstFnDecl{
+		Tok_fn: tok_fn,
+		Name: name,
+		Tok_lbrace: tok_lbrace,
+		Args: args,
+		Tok_rbrace: tok_rbrace,
+		Tok_thinarr: tok_thinarr,
+		Ret_t: ret_t,
+		Body: body,
 	}
 }
 
@@ -84,8 +139,8 @@ func (p *Parser) ParseLetStmt() AstLetStmt {
 		expr = &e
 	}
 	return AstLetStmt{
-		Tok_let: &tok_let,
-		Name: &name,
+		Tok_let: tok_let,
+		Name: name,
 		Tok_colon: tok_colon,
 		Vtype: vtype,
 		Tok_assign: tok_assign,
@@ -96,14 +151,14 @@ func (p *Parser) ParseLetStmt() AstLetStmt {
 func (p *Parser) ParseBreakStmt() AstBreakStmt {
 	tok_break := p.tokens.Next()
 	return AstBreakStmt{
-		Tok_break: &tok_break,
+		Tok_break: tok_break,
 	}
 }
 
 func (p *Parser) ParseContinueStmt() AstContinueStmt {
 	tok_continue := p.tokens.Next()
 	return AstContinueStmt{
-		tok_continue: &tok_continue,
+		tok_continue: tok_continue,
 	}
 }
 
@@ -111,7 +166,7 @@ func (p *Parser) ParseReturnStmt() AstReturnStmt {
 	tok_return := p.tokens.Next()
 	expr := p.ParseExpr()
 	return AstReturnStmt{
-		Tok_return: &tok_return,
+		Tok_return: tok_return,
 		Expr: expr,
 	}
 }
@@ -133,7 +188,7 @@ loop:
 				Etype: ANEOp2,
 				Item: &AstExprOp2{
 					Lhs: lhs,
-					Op: &tok,
+					Op: tok,
 					Rhs: rhs,
 				},
 			}
@@ -157,7 +212,7 @@ loop:
 				Etype: ANEOp2,
 				Item: &AstExprOp2{
 					Lhs: lhs,
-					Op: &tok,
+					Op: tok,
 					Rhs: rhs,
 				},
 			}
@@ -181,7 +236,7 @@ loop:
 				Etype: ANEOp2,
 				Item: &AstExprOp2{
 					Lhs: lhs,
-					Op: &tok,
+					Op: tok,
 					Rhs: rhs,
 				},
 			}
@@ -205,7 +260,7 @@ loop:
 				Etype: ANEOp2,
 				Item: &AstExprOp2{
 					Lhs: lhs,
-					Op: &tok,
+					Op: tok,
 					Rhs: rhs,
 				},
 			}
@@ -229,7 +284,7 @@ loop:
 				Etype: ANEOp2,
 				Item: &AstExprOp2{
 					Lhs: lhs,
-					Op: &tok,
+					Op: tok,
 					Rhs: rhs,
 				},
 			}
@@ -253,7 +308,7 @@ loop:
 				Etype: ANEOp2,
 				Item: &AstExprOp2{
 					Lhs: lhs,
-					Op: &tok,
+					Op: tok,
 					Rhs: rhs,
 				},
 			}
@@ -277,7 +332,7 @@ loop:
 				Etype: ANEOp2,
 				Item: &AstExprOp2{
 					Lhs: lhs,
-					Op: &tok,
+					Op: tok,
 					Rhs: rhs,
 				},
 			}
@@ -301,7 +356,7 @@ loop:
 				Etype: ANEOp2,
 				Item: &AstExprOp2{
 					Lhs: lhs,
-					Op: &tok,
+					Op: tok,
 					Rhs: rhs,
 				},
 			}
@@ -325,7 +380,7 @@ loop:
 				Etype: ANEOp2,
 				Item: &AstExprOp2{
 					Lhs: lhs,
-					Op: &tok,
+					Op: tok,
 					Rhs: rhs,
 				},
 			}
@@ -349,7 +404,7 @@ loop:
 				Etype: ANEOp2,
 				Item: &AstExprOp2{
 					Lhs: lhs,
-					Op: &tok,
+					Op: tok,
 					Rhs: rhs,
 				},
 			}
@@ -371,15 +426,41 @@ func (p *Parser) ParseExprBinary() AstExpr {
 		return AstExpr{
 			Etype: ANELiteral,
 			Item: &AstExprLiteral{
-				Value: &tok,
+				Value: tok,
 			},
 		}
 	case Ident:
 		return AstExpr{
 			Etype: ANEVar,
 			Item: &AstExprVar{
-				Ident: &tok,
+				Ident: tok,
 			},
+		}
+	case LBrace:
+		tok_lbrace := tok
+		expr := p.ParseExpr()
+		tok_rbrace := p.tokens.AssertNextOrReport(RBrace, p.file)
+		return AstExpr{
+			Etype: ANEGroup,
+			Item: &AstExprGroup{
+				Tok_lbrace: tok_lbrace,
+				Expr: expr,
+				Tok_rbrace: tok_rbrace,
+			},
+		}
+	case LBra:
+		p.tokens.Backward()
+		block := p.ParseBlock()
+		return AstExpr{
+			Etype: ANEBlock,
+			Item: &block,
+		}
+	case OBOr:
+		p.tokens.Backward()
+		closure := p.ParseClosure()
+		return AstExpr{
+			Etype: ANEClosure,
+			Item: &closure,
 		}
 	default:
 		err := reporter.Error(
@@ -394,4 +475,70 @@ func (p *Parser) ParseExprBinary() AstExpr {
 
 func (p *Parser) ParseValType() AstValType {
 	panic("not implemented yet")
+}
+
+func (p *Parser) ParseBlock() AstBlock {
+	tok_lbra := p.tokens.AssertNextOrReport(LBra, p.file)
+	items := make([]AstStmt, 0)
+	var tok_rbra *Token
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		if tok.ttype == RBra {
+			tok_rbra = tok
+			p.tokens.Forward()
+			break
+		}
+		stmt := p.ParseStmt()
+		items = append(items, stmt)
+	}
+	return AstBlock{
+		Tok_lbra: tok_lbra,
+		Items: items,
+		Tok_rbra: tok_rbra,
+	}
+}
+
+func (p *Parser) ParseClosure() AstClosure {
+	tok_lbor := p.tokens.Next()
+	args := make([]AstFnArg, 0)
+	var tok_rbor *Token
+	for ; !p.tokens.IsEof(); {
+		tok := p.tokens.Peek()
+		if tok.ttype == OBOr {
+			tok_rbor = tok
+			p.tokens.Forward()
+			break
+		}
+		aname := p.tokens.AssertNextOrReport(Ident, p.file)
+		tok_colon := p.tokens.AssertNext(Colon)
+		var atype AstValType
+		if tok_colon != nil {
+			atype = p.ParseValType()
+		} else {
+			atype = ANTUnknownNew()
+		}
+		tok_comma := p.tokens.AssertNext(Comma)
+		args = append(args, AstFnArg{
+			Name: aname,
+			Tok_colon: tok_colon,
+			Atype: atype,
+			Tok_comma: tok_comma,
+		})
+	}
+	tok_thinarr := p.tokens.AssertNext(ThinArr)
+	var ret_t AstValType
+	if tok_thinarr != nil {
+		ret_t = p.ParseValType()
+	} else {
+		ret_t = ANTUnknownNew()
+	}
+	body := p.ParseExpr()
+	return AstClosure{
+		Tok_lbor: tok_lbor,
+		Args: args,
+		Tok_rbor: tok_rbor,
+		Tok_thinarr: tok_thinarr,
+		Ret_t: ret_t,
+		Body: body,
+	}
 }

@@ -13,6 +13,7 @@ const (
 	ANFile AstType = iota
 	
 	ANFndecl
+	ANClosure
 	ANFnArg
 
 	ANExpr
@@ -48,6 +49,11 @@ const (
 	ANEGroup
 	ANELiteral
 	ANEVar
+	ANEIfElse
+	ANEWhile
+	ANEForIn
+	ANEClosure
+	ANEBlock
 )
 
 type AstValTypeType int
@@ -68,6 +74,7 @@ const (
 	ANSLet
 	ANSReturn
 	ANSBreak
+	ANSFndecl
 	ANSContinue
 )
 
@@ -82,7 +89,7 @@ var debugNilString = color.New(color.Italic, color.Bold, color.FgHiCyan).Sprintf
 func debug_token(x uint, tok *Token) {
 	ident(x)
 	if tok != nil {
-		fmt.Printf("Token { %v, %v }\n", tok.ttype, tok.value)
+		fmt.Printf("Token { %v, `%v` }\n", tok.ttype, tok.value)
 	} else {
 		fmt.Printf("Token { %v }\n", debugNilString)
 	}
@@ -119,7 +126,7 @@ type AstFnDecl struct {
 	Args        []AstFnArg
 	Tok_rbrace  *Token
 	Tok_thinarr *Token
-	Ret_t       *AstValType
+	Ret_t       AstValType
 	Body        AstBlock
 }
 
@@ -142,10 +149,39 @@ func (a *AstFnDecl) Debug(x uint) {
 	a.Body.Debug(x + 1)
 }
 
+type AstClosure struct {
+	Tok_lbor    *Token
+	Args        []AstFnArg
+	Tok_rbor    *Token
+	Tok_thinarr *Token
+	Ret_t       AstValType
+	Body        AstExpr
+}
+
+func (a *AstClosure) ANType() AstType {
+	return ANFndecl
+}
+
+func (a *AstClosure) Debug(x uint) {
+	ident(x)
+	fmt.Printf("AstClosure\n")
+	debug_token(x+1, a.Tok_lbor)
+	ident(x + 1)
+	fmt.Printf("Arguments\n")
+	for i := range a.Args {
+		arg := a.Args[i]
+		arg.Debug(x + 2)
+	}
+	debug_token(x+1, a.Tok_rbor)
+	a.Ret_t.Debug(x + 1)
+	a.Body.Debug(x + 1)
+}
+
 type AstFnArg struct {
 	Name      *Token
 	Tok_colon *Token
-	Atype     *AstValType
+	Atype     AstValType
+	Tok_comma *Token
 }
 
 func (a *AstFnArg) ANType() AstType {
@@ -157,9 +193,8 @@ func (a *AstFnArg) Debug(x uint) {
 	fmt.Printf("AstFnArg\n")
 	debug_token(x+1, a.Name)
 	debug_token(x+1, a.Tok_colon)
-	if a.Atype != nil {
-		a.Atype.Debug(x + 1)
-	}
+	a.Atype.Debug(x + 1)
+	debug_token(x+1, a.Tok_comma)
 }
 
 type AstValType struct {
@@ -301,9 +336,11 @@ func (a *AstBlock) Debug(x uint) {
 	ident(x)
 	fmt.Printf("AstBlock\n")
 	debug_token(x+1, a.Tok_lbra)
+	ident(x + 1)
+	fmt.Printf("Items\n")
 	for i := range a.Items {
 		item := a.Items[i]
-		item.Debug(x + 1)
+		item.Debug(x + 2)
 	}
 	debug_token(x+1, a.Tok_rbra)
 }
