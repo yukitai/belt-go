@@ -29,7 +29,19 @@ func WhereNew(line1, line2, begin, end uint) Where {
 	}
 }
 
+func (w *Where) Clone() Where {
+	return Where {
+		line1: w.line1, 
+		line2: w.line2, 
+		begin: w.begin, 
+		end: w.end,
+	}
+}
+
 func (w1 *Where) Merge(w2 *Where) Where {
+	if w2 == nil {
+		return w2.Clone()
+	}
 	line1 := min(w1.line1, w2.line1)
 	line2 := max(w1.line2, w2.line2)
 	begin := min(w1.begin, w2.begin)

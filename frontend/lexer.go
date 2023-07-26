@@ -473,6 +473,12 @@ func (l *Lexer) Tokenize() TokenStream {
 				ttype = KContinue
 			case "return":
 				ttype = KReturn
+			case "struct":
+				ttype = KStruct
+			case "enum":
+				ttype = KEnum
+			case "impl":
+				ttype = KImpl
 			case "int":
 				ttype = KTInt
 			case "float":
@@ -481,6 +487,8 @@ func (l *Lexer) Tokenize() TokenStream {
 				ttype = KTString
 			case "bool":
 				ttype = KTBool
+			case "__core_print":
+				ttype = BSCorePrint
 			default:
 				if value[0] == '\'' {
 					ttype = KTVar

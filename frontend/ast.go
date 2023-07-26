@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	"belt/reporter"
 	"fmt"
 	"strings"
 
@@ -22,9 +23,10 @@ const (
 	ANExprGroup
 	ANExprLiteral
 	ANExprVar
+	ANExprFncall
+	ANExprBuiltinCorePrint
 
 	ANStmt
-	ANBuiltinStmt
 	ANStmtLet
 	ANStmtReturn
 	ANStmtBreak
@@ -54,6 +56,8 @@ const (
 	ANEForIn
 	ANEClosure
 	ANEBlock
+	ANEBuiltinCorePrint
+	ANEFncall
 )
 
 type AstValTypeType int
@@ -70,7 +74,6 @@ type AstStmtType int
 
 const (
 	ANSExpr AstStmtType = iota
-	ANSBuiltinStmt
 	ANSLet
 	ANSReturn
 	ANSBreak
@@ -98,6 +101,7 @@ func debug_token(x uint, tok *Token) {
 type AstNode interface {
 	ANType() AstType
 	Debug(uint)
+	Where() reporter.Where
 }
 
 type AstFile struct {
@@ -111,10 +115,13 @@ func (a *AstFile) ANType() AstType {
 func (a *AstFile) Debug(x uint) {
 	ident(x)
 	fmt.Printf("AstFile\n")
-	for i := range a.Items {
-		item := a.Items[i]
+	for _, item := range a.Items {
 		item.Debug(x + 1)
 	}
+}
+
+func (a *AstFile) Where() reporter.Where {
+	return reporter.WhereNew(1, 1, 0, 0)
 }
 
 type AstItem = AstStmt
@@ -140,13 +147,16 @@ func (a *AstFnDecl) Debug(x uint) {
 	debug_token(x+1, a.Tok_fn)
 	debug_token(x+1, a.Name)
 	debug_token(x+1, a.Tok_lbrace)
-	for i := range a.Args {
-		arg := a.Args[i]
+	for _, arg:= range a.Args {
 		arg.Debug(x + 1)
 	}
 	debug_token(x+1, a.Tok_rbrace)
 	a.Ret_t.Debug(x + 1)
 	a.Body.Debug(x + 1)
+}
+
+func (a *AstFnDecl) Where() reporter.Where {
+	return a.Tok_fn.where.Merge(&a.Body.Tok_rbra.where)
 }
 
 type AstClosure struct {
@@ -168,13 +178,17 @@ func (a *AstClosure) Debug(x uint) {
 	debug_token(x+1, a.Tok_lbor)
 	ident(x + 1)
 	fmt.Printf("Arguments\n")
-	for i := range a.Args {
-		arg := a.Args[i]
+	for _, arg := range a.Args {
 		arg.Debug(x + 2)
 	}
 	debug_token(x+1, a.Tok_rbor)
 	a.Ret_t.Debug(x + 1)
 	a.Body.Debug(x + 1)
+}
+
+func (a *AstClosure) Where() reporter.Where {
+	body := a.Body.Item.Where()
+	return a.Tok_lbor.where.Merge(&body)
 }
 
 type AstFnArg struct {
@@ -197,6 +211,10 @@ func (a *AstFnArg) Debug(x uint) {
 	debug_token(x+1, a.Tok_comma)
 }
 
+func (a *AstFnArg) Where() reporter.Where {
+	return a.Name.where
+}
+
 type AstValType struct {
 	Vttype AstValTypeType
 	Item   AstNode
@@ -210,6 +228,10 @@ func (a *AstValType) Debug(x uint) {
 	ident(x)
 	fmt.Printf("AstType\n")
 	a.Item.Debug(x + 1)
+}
+
+func (a *AstValType) Where() reporter.Where {
+	return a.Item.Where()
 }
 
 type AstExpr struct {
@@ -227,6 +249,10 @@ func (a *AstExpr) Debug(x uint) {
 	a.Item.Debug(x + 1)
 }
 
+func (a *AstExpr) Where() reporter.Where {
+	return a.Item.Where()
+}
+
 type AstExprOp1 struct {
 	Tok_op *Token
 	Expr AstExpr
@@ -241,6 +267,11 @@ func (a *AstExprOp1) Debug(x uint) {
 	fmt.Printf("AstExprOperator 1\n")
 	debug_token(x + 1, a.Tok_op)
 	a.Expr.Debug(x + 1)
+}
+
+func (a *AstExprOp1) Where() reporter.Where {
+	expr := a.Expr.Where()
+	return a.Tok_op.where.Merge(&expr)
 }
 
 type AstExprGroup struct {
@@ -261,6 +292,10 @@ func (a *AstExprGroup) Debug(x uint) {
 	debug_token(x + 1, a.Tok_rbrace)
 }
 
+func (a *AstExprGroup) Where() reporter.Where {
+	return a.Tok_lbrace.where.Merge(&a.Tok_rbrace.where)
+}
+
 type AstExprLiteral struct {
 	Value *Token
 }
@@ -275,6 +310,10 @@ func (a *AstExprLiteral) Debug(x uint) {
 	debug_token(x + 1, a.Value)
 }
 
+func (a *AstExprLiteral) Where() reporter.Where {
+	return a.Value.Where()
+}
+
 type AstExprVar struct {
 	Ident *Token
 }
@@ -287,6 +326,60 @@ func (a *AstExprVar) Debug(x uint) {
 	ident(x)
 	fmt.Printf("AstExprVariable\n")
 	debug_token(x + 1, a.Ident)
+}
+
+func (a *AstExprVar) Where() reporter.Where {
+	return a.Ident.Where()
+}
+
+type AstExprFncall struct {
+	Callable AstExpr
+	Tok_lbrace *Token
+	Args []AstExpr
+	Tok_rbrace *Token
+}
+
+func (a *AstExprFncall) ANType() AstType {
+	return ANExprFncall
+}
+
+func (a *AstExprFncall) Debug(x uint) {
+	ident(x)
+	fmt.Printf("ANExprFncall\n")
+	a.Callable.Debug(x + 1)
+	debug_token(x + 1, a.Tok_lbrace)
+	ident(x + 1)
+	fmt.Printf("Arguments\n")
+	for _, arg := range a.Args {
+		arg.Debug(x + 2)
+	}
+	debug_token(x + 1, a.Tok_rbrace)
+}
+
+func (a *AstExprFncall) Where() reporter.Where {
+	callable := a.Callable.Where()
+	return a.Tok_rbrace.where.Merge(&callable)
+}
+
+type AstExprBuiltinCorePrint struct {
+	Tok_kcoreprint *Token
+	Expr AstExpr
+}
+
+func (a *AstExprBuiltinCorePrint) ANType() AstType {
+	return ANExprBuiltinCorePrint
+}
+
+func (a *AstExprBuiltinCorePrint) Debug(x uint) {
+	ident(x)
+	fmt.Printf("AstExprBuiltinCorePrint\n")
+	debug_token(x + 1, a.Tok_kcoreprint)
+	a.Expr.Debug(x + 1)
+}
+
+func (a *AstExprBuiltinCorePrint) Where() reporter.Where {
+	expr := a.Expr.Where()
+	return a.Tok_kcoreprint.where.Merge(&expr)
 }
 
 type AstExprOp2 struct {
@@ -307,6 +400,12 @@ func (a *AstExprOp2) Debug(x uint) {
 	a.Rhs.Debug(x + 1)
 }
 
+func (a *AstExprOp2) Where() reporter.Where {
+	lhs := a.Lhs.Where()
+	rhs := a.Rhs.Where()
+	return lhs.Merge(&rhs)
+}
+
 type AstStmt struct {
 	Stype AstStmtType
 	Item  AstNode
@@ -320,6 +419,10 @@ func (a *AstStmt) Debug(x uint) {
 	ident(x)
 	fmt.Printf("AstStmt\n")
 	a.Item.Debug(x + 1)
+}
+
+func (a *AstStmt) Where() reporter.Where {
+	return a.Item.Where()
 }
 
 type AstBlock struct {
@@ -338,11 +441,14 @@ func (a *AstBlock) Debug(x uint) {
 	debug_token(x+1, a.Tok_lbra)
 	ident(x + 1)
 	fmt.Printf("Items\n")
-	for i := range a.Items {
-		item := a.Items[i]
+	for _, item := range a.Items {
 		item.Debug(x + 2)
 	}
 	debug_token(x+1, a.Tok_rbra)
+}
+
+func (a *AstBlock) Where() reporter.Where {
+	return a.Tok_lbra.where.Merge(&a.Tok_rbra.where)
 }
 
 type AstLetStmt struct {
@@ -371,6 +477,18 @@ func (a *AstLetStmt) Debug(x uint) {
 	}
 }
 
+func (a *AstLetStmt) Where() reporter.Where {
+	if a.Tok_assign != nil {
+		expr := a.Expr.Where()
+		return a.Tok_let.where.Merge(&expr)
+	}
+	if a.Tok_colon != nil {
+		vtype := a.Vtype.Where()
+		return a.Tok_let.where.Merge(&vtype)
+	}
+	return a.Tok_let.where.Merge(&a.Name.where)
+}
+
 type AstReturnStmt struct {
 	Tok_return *Token
 	Expr AstExpr
@@ -387,6 +505,11 @@ func (a *AstReturnStmt) Debug(x uint) {
 	a.Expr.Debug(x + 1)
 }
 
+func (a *AstReturnStmt) Where() reporter.Where {
+	expr := a.Expr.Where()
+	return a.Tok_return.where.Merge(&expr)
+}
+
 type AstBreakStmt struct {
 	Tok_break *Token
 }
@@ -399,6 +522,10 @@ func (a *AstBreakStmt) Debug(x uint) {
 	ident(x)
 	fmt.Printf("AstBreakStmt\n")
 	debug_token(x + 1, a.Tok_break)
+}
+
+func (a *AstBreakStmt) Where() reporter.Where {
+	return a.Tok_break.where
 }
 
 type AstContinueStmt struct {
@@ -415,6 +542,10 @@ func (a *AstContinueStmt) Debug(x uint) {
 	debug_token(x + 1, a.tok_continue)
 }
 
+func (a *AstContinueStmt) Where() reporter.Where {
+	return a.tok_continue.where
+}
+
 type AstUnkownType struct {
 	Rtype *AstValType
 }
@@ -429,6 +560,10 @@ func (a *AstUnkownType) Debug(x uint) {
 	if a.Rtype != nil {
 		a.Rtype.Debug(x + 1)
 	}
+}
+
+func (a *AstUnkownType) Where() reporter.Where {
+	return reporter.WhereNew(1, 1, 0, 0)
 }
 
 func ANTUnknownNew() AstValType {

@@ -19,134 +19,143 @@ type Token struct {
 const (
 	EoF TokenType = iota
 
-	Ident     // 🎀 ([_a-zA-Z][_a-zA-Z0-9]*)
-
-	LlInt     // 🎀 ([0-9]+)
-    LlFloat   // 🎀 ([0-9]+\.[0-9]*)
-	LlString  // 🎀 "(.*)"
-	LlBool    // 🎀 (true)|(false)
-	LlNil     // 🎀 nil
-
-	KFn       // 🎀 fn
-	KIf       // 🎀 if
-	KElse     // 🎀 else
-	KWhile    // 🎀 while
-	KFor      // 🎀 for
-	KIn       // 🎀 in
-	KLet      // 🎀 let
-	KBreak    // 🎀 break
-	KContinue // 🎀 continue
-	KReturn // 🎀 return
-
-	KTInt     // 🎀 int
-	KTFloat   // 🎀 float
-	KTString  // 🎀 string
-	KTBool    // 🎀 bool
-	KTVar     // 🎀 '<Ident>
-
-	OAdd      // 🎀 +
-	OAddf     // 🎀 +.
-	OConnect  // 🎀 ++
-	OSub      // 🎀 -
-	OSubf     // 🎀 -.
-	OMul      // 🎀 *
-	OMulf     // 🎀 *.
-	ODiv      // 🎀 /
-	ODivf     // 🎀 /.
-	OEq       // 🎀 ==
-	ONeq	  // 🎀 !=
-	OGrt      // 🎀 >
-	OGeq      // 🎀 >=
-	OLes      // 🎀 <
-	OLeq      // 🎀 <=
-	OAnd      // 🎀 &&
-	OOr       // 🎀 ||
-	OBXor     // 🎀 ^
-	OBAnd     // 🎀 &
-	OBOr      // 🎀 |
-	ONot      // 🎀 !
-	OBNot     // 🎀 ~
-	OMovl     // 🎀 <<
-	OMovr     // 🎀 >>
-	OMember   // 🎀 .
-	OLookup   // 🎀 ::
-	OAssign   // 🎀 =
-
-	Colon     // 🎀 :
-	Comma     // 🎀 ,
-	Semi      // 🎀 ;
-	ThinArr   // 🎀 ->
-	FatArr    // 🎀 =>
-
-	LBrace    // 🎀 (
-	RBrace    // 🎀 )
-	LBracket  // 🎀 [
-	RBracket  // 🎀 ]
-	LBra      // 🎀 {
-	RBra      // 🎀 }
+	Ident     		// 🎀 ([_a-zA-Z][_a-zA-Z0-9]*)
+	
+	LlInt     		// 🎀 ([0-9]+)
+    LlFloat   		// 🎀 ([0-9]+\.[0-9]*)
+	LlString  		// 🎀 "(.*)"
+	LlBool    		// 🎀 (true)|(false)
+	LlNil     		// 🎀 nil
+	
+	KFn       		// 🎀 fn
+	KIf       		// 🎀 if
+	KElse     		// 🎀 else
+	KWhile    		// 🎀 while
+	KFor      		// 🎀 for
+	KIn       		// 🎀 in
+	KLet      		// 🎀 let
+	KBreak    		// 🎀 break
+	KContinue 		// 🎀 continue
+	KReturn   		// 🎀 return
+	KStruct   		// 🎀 struct
+	KEnum     		// 🎀 enum
+	KImpl     		// 🎀 impl
+	
+	KTInt     		// 🎀 int
+	KTFloat   		// 🎀 float
+	KTString  		// 🎀 string
+	KTBool    		// 🎀 bool
+	KTVar     		// 🎀 '<Ident>
+	
+	OAdd      		// 🎀 +
+	OAddf     		// 🎀 +.
+	OConnect  		// 🎀 ++
+	OSub      		// 🎀 -
+	OSubf     		// 🎀 -.
+	OMul      		// 🎀 *
+	OMulf     		// 🎀 *.
+	ODiv      		// 🎀 /
+	ODivf     		// 🎀 /.
+	OEq       		// 🎀 ==
+	ONeq	  		// 🎀 !=
+	OGrt      		// 🎀 >
+	OGeq      		// 🎀 >=
+	OLes      		// 🎀 <
+	OLeq      		// 🎀 <=
+	OAnd      		// 🎀 &&
+	OOr       		// 🎀 ||
+	OBXor     		// 🎀 ^
+	OBAnd     		// 🎀 &
+	OBOr      		// 🎀 |
+	ONot      		// 🎀 !
+	OBNot     		// 🎀 ~
+	OMovl     		// 🎀 <<
+	OMovr     		// 🎀 >>
+	OMember   		// 🎀 .
+	OLookup   		// 🎀 ::
+	OAssign   		// 🎀 =
+	
+	Colon     		// 🎀 :
+	Comma     		// 🎀 ,
+	Semi      		// 🎀 ;
+	ThinArr   		// 🎀 ->
+	FatArr    		// 🎀 =>
+	
+	LBrace    		// 🎀 (
+	RBrace    		// 🎀 )
+	LBracket  		// 🎀 [
+	RBracket  		// 🎀 ]
+	LBra        	// 🎀 {
+	RBra        	// 🎀 }
+		
+	BSCorePrint 	// 🎀 __core_print
 )
 
 var TokenStringMap = map[TokenType]string{
-	EoF:      	"eof",
-	Ident:    	"identifier",
-	LlInt:    	"literal integer",
-	LlFloat:  	"literal float",
-	LlString: 	"literal string",
-	LlBool:   	"literal boolean",
-	LlNil:    	"literal nil",
-	KFn:      	"keyword fn",
-	KIf:      	"keyword if",
-	KElse:    	"keyword else",
-	KWhile:   	"keyword while",
-	KFor:     	"keyword for",
-	KIn:      	"keyword in",
-	KLet:     	"keyword let",
-	KBreak:   	"keyword break",
-	KContinue: 	"keyword continue",
-	KReturn: 	"keyword return",
-	KTInt: 		"type `int`",
-	KTFloat: 	"type `float`",
-	KTString: 	"type `string`",
-	KTBool: 	"type `bool`",
-	KTVar: 		"type variable",
-	OAdd: 		"operator +",
-	OAddf: 		"operator +.",
-	OConnect: 	"operator ++",
-	OSub: 		"operator -",
-	OSubf: 		"operator -.",
-	OMul: 		"operator *",
-	OMulf: 		"operator *.",
-	ODiv: 		"operator /",
-	ODivf: 		"operator /.",
-	OEq: 		"operator ==",
-	ONeq: 		"operator !=",
-	OGrt: 		"operator >",
-	OGeq: 		"operator >=",
-	OLes: 		"operator <",
-	OLeq: 		"operator <=",
-	OAnd: 		"operator &&",
-	OOr: 		"operator ||",
-	OBXor: 		"operator ^",
-	OBAnd: 		"operator &",
-	OBOr: 		"operator |",
-	ONot: 		"operator !",
-	OBNot: 		"operator ~",
-	OMovl: 		"operator <<",
-	OMovr: 		"operator >>",
-	OMember: 	"operator .",
-	OLookup: 	"operator ::",
-	OAssign: 	"operator =",
-	Colon: 		"colon",
-	Comma: 		"comma",
-	Semi: 		"semi",
-	ThinArr: 	"thin arrow",
-	FatArr: 	"fat arrow",
-	LBrace: 	"left brace",
-	RBrace: 	"right brace",
-	LBracket: 	"left square bracket",
-	RBracket: 	"right square bracket",
-	LBra: 		"left bracket",
-	RBra: 		"right bracket",
+	EoF:      		"eof",
+	Ident:    		"identifier",
+	LlInt:    		"literal integer",
+	LlFloat:  		"literal float",
+	LlString: 		"literal string",
+	LlBool:   		"literal boolean",
+	LlNil:    		"literal nil",
+	KFn:      		"keyword fn",
+	KIf:      		"keyword if",
+	KElse:    		"keyword else",
+	KWhile:   		"keyword while",
+	KFor:     		"keyword for",
+	KIn:      		"keyword in",
+	KLet:     		"keyword let",
+	KBreak:   		"keyword break",
+	KContinue: 		"keyword continue",
+	KReturn: 		"keyword return",
+	KStruct: 		"keyword struct",
+	KEnum:	 		"keyword enum",
+	KImpl:	 		"keyword impl",
+	KTInt: 			"type `int`",
+	KTFloat: 		"type `float`",
+	KTString: 		"type `string`",
+	KTBool: 		"type `bool`",
+	KTVar: 			"type variable",
+	OAdd: 			"operator +",
+	OAddf: 			"operator +.",
+	OConnect: 		"operator ++",
+	OSub: 			"operator -",
+	OSubf: 			"operator -.",
+	OMul: 			"operator *",
+	OMulf: 			"operator *.",
+	ODiv: 			"operator /",
+	ODivf: 			"operator /.",
+	OEq: 			"operator ==",
+	ONeq: 			"operator !=",
+	OGrt: 			"operator >",
+	OGeq: 			"operator >=",
+	OLes: 			"operator <",
+	OLeq: 			"operator <=",
+	OAnd: 			"operator &&",
+	OOr: 			"operator ||",
+	OBXor: 			"operator ^",
+	OBAnd: 			"operator &",
+	OBOr: 			"operator |",
+	ONot: 			"operator !",
+	OBNot: 			"operator ~",
+	OMovl: 			"operator <<",
+	OMovr: 			"operator >>",
+	OMember: 		"operator .",
+	OLookup: 		"operator ::",
+	OAssign: 		"operator =",
+	Colon: 			"colon",
+	Comma: 			"comma",
+	Semi: 			"semi",
+	ThinArr: 		"thin arrow",
+	FatArr: 		"fat arrow",
+	LBrace: 		"left brace",
+	RBrace: 		"right brace",
+	LBracket: 		"left square bracket",
+	RBracket: 		"right square bracket",
+	LBra: 			"left bracket",
+	RBra: 			"right bracket",
+	BSCorePrint:	"builtin name `__core_print`",
 }
 
 func (tt *TokenType) ToString() string {
@@ -258,8 +267,7 @@ func (ts *TokenStream) AssertNextOrReport(tt TokenType, file *utils.File) *Token
 
 func (ts *TokenStream) ToString() string {
 	res := make([]string, 0)
-	for i := range(ts.tokens) {
-		tok := ts.tokens[i]
+	for _, tok := range(ts.tokens) {
 		switch tok.ttype {
 		case LlString:
 			res = append(res, fmt.Sprintf("\"%v\"", tok.value))

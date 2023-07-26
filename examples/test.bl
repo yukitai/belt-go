@@ -1,3 +1,7 @@
 fn adder(a) {
     |b| a + b
 }
+
+fn main() {
+    let a
+}

@@ -37,25 +37,25 @@ func (p *Parser) ParseStmt() AstStmt {
 	case KLet:
 		stmt := p.ParseLetStmt()
 		return AstStmt{
-			Stype: ANSExpr,
+			Stype: ANSLet,
 			Item: &stmt,
 		}
 	case KBreak:
 		stmt := p.ParseBreakStmt()
 		return AstStmt{
-			Stype: ANSExpr,
+			Stype: ANSBreak,
 			Item: &stmt,
 		}
 	case KContinue:
 		stmt := p.ParseContinueStmt()
 		return AstStmt{
-			Stype: ANSExpr,
+			Stype: ANSContinue,
 			Item: &stmt,
 		}
 	case KReturn:
 		stmt := p.ParseReturnStmt()
 		return AstStmt{
-			Stype: ANSExpr,
+			Stype: ANSReturn,
 			Item: &stmt,
 		}
 	case KFn:
@@ -461,6 +461,16 @@ func (p *Parser) ParseExprBinary() AstExpr {
 		return AstExpr{
 			Etype: ANEClosure,
 			Item: &closure,
+		}
+	case BSCorePrint:
+		tok_kcoreprint := tok
+		expr := p.ParseExpr()
+		return AstExpr{
+			Etype: ANEBuiltinCorePrint,
+			Item: &AstExprBuiltinCorePrint{
+				Tok_kcoreprint: tok_kcoreprint,
+				Expr: expr,
+			},
 		}
 	default:
 		err := reporter.Error(

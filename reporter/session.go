@@ -27,9 +27,8 @@ var color_mark = color.New(color.Underline, color.Bold)
 
 func (s *Session) Mark(src []rune) []rune {
 	marked := make([]rune, 0)
-	for i := range(src) {
+	for i, chr := range(src) {
 		i := uint(i)
-		chr := src[i]
 		if i >= s.where.begin && i < s.where.end && chr != '\n' {
 			marked = append(
 				marked,
