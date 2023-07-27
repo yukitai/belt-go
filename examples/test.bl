@@ -1,7 +1,4 @@
-fn adder(a) {
-    |b| a + b
-}
-
-fn main() {
-    let a
+fn main() -> int {
+    let a: string = "Hello, World!"
+    a
 }

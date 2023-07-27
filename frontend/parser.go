@@ -92,7 +92,7 @@ func (p *Parser) ParseFndeclStmt() AstFnDecl {
 		if tok_colon != nil {
 			atype = p.ParseValType()
 		} else {
-			atype = ANTUnknownNew()
+			atype = ANTUnknownNew(aname.where)
 		}
 		tok_comma := p.tokens.AssertNext(Comma)
 		args = append(args, AstFnArg{
@@ -107,7 +107,7 @@ func (p *Parser) ParseFndeclStmt() AstFnDecl {
 	if tok_thinarr != nil {
 		ret_t = p.ParseValType()
 	} else {
-		ret_t = ANTUnknownNew()
+		ret_t = ANTUnknownNew(tok_fn.where.Merge(&tok_rbrace.where))
 	}
 	body := p.ParseBlock()
 	return AstFnDecl{
@@ -130,7 +130,7 @@ func (p *Parser) ParseLetStmt() AstLetStmt {
 	if tok_colon != nil {
 		vtype = p.ParseValType()
 	} else {
-		vtype = ANTUnknownNew()
+		vtype = ANTUnknownNew(name.where)
 	}
 	tok_assign := p.tokens.AssertNext(OAssign)
 	var expr *AstExpr
@@ -484,7 +484,35 @@ func (p *Parser) ParseExprBinary() AstExpr {
 }
 
 func (p *Parser) ParseValType() AstValType {
-	panic("not implemented yet")
+	return p.ParseValTypeBinary()
+}
+
+func (p *Parser) ParseValTypeBinary() AstValType {
+	tok := p.tokens.Next()
+	switch tok.ttype {
+	case KTBool, KTFloat, KTInt, KTString:
+		return AstValType{
+			Vttype: ANTBinary,
+			Item: &AstValTypeBinary{
+				Tok_type: tok,
+			},
+		}
+	case KTVar:
+		return AstValType{
+			Vttype: ANTVar,
+			Item: &AstValTypeVar{
+				Ident: tok,
+			},
+		}
+	default:
+		err := reporter.Error(
+			tok.where,
+			fmt.Sprintf("unexpected %v", tok.ttype.ToString()),
+		)
+		reporter.Report(&err, p.file)
+		utils.Exit(1)
+		panic("reaching an unreachable code! something went wrong")
+	}
 }
 
 func (p *Parser) ParseBlock() AstBlock {
@@ -525,7 +553,7 @@ func (p *Parser) ParseClosure() AstClosure {
 		if tok_colon != nil {
 			atype = p.ParseValType()
 		} else {
-			atype = ANTUnknownNew()
+			atype = ANTUnknownNew(aname.where)
 		}
 		tok_comma := p.tokens.AssertNext(Comma)
 		args = append(args, AstFnArg{
@@ -540,7 +568,7 @@ func (p *Parser) ParseClosure() AstClosure {
 	if tok_thinarr != nil {
 		ret_t = p.ParseValType()
 	} else {
-		ret_t = ANTUnknownNew()
+		ret_t = ANTUnknownNew(tok_lbor.where.Merge(&tok_rbor.where))
 	}
 	body := p.ParseExpr()
 	return AstClosure{

@@ -234,6 +234,84 @@ func (a *AstValType) Where() reporter.Where {
 	return a.Item.Where()
 }
 
+type AstValTypeBinary struct {
+	Tok_type *Token
+}
+
+func (a *AstValTypeBinary) ANType() AstType {
+	return ANTypeBinary
+}
+
+func (a *AstValTypeBinary) Debug(x uint) {
+	ident(x)
+	fmt.Printf("AstTypeBinary\n")
+	debug_token(x + 1, a.Tok_type)
+}
+
+func (a *AstValTypeBinary) Where() reporter.Where {
+	return a.Tok_type.where
+}
+
+type AstValTypeVar struct {
+	Ident *Token
+	Real *AstValType
+}
+
+func (a *AstValTypeVar) ANType() AstType {
+	return ANTypeVar
+}
+
+func (a *AstValTypeVar) Debug(x uint) {
+	ident(x)
+	fmt.Printf("AstTypeVar\n")
+	debug_token(x + 1, a.Ident)
+	if a.Real != nil {
+		a.Real.Debug(x + 1)
+	}
+}
+
+func (a *AstValTypeVar) Where() reporter.Where {
+	return a.Ident.where
+}
+/*
+type AstValTypeStruct struct {
+	Vttype AstValTypeType
+	Item   AstNode
+}
+
+func (a *AstValTypeStruct) ANType() AstType {
+	return ANTypeStruct
+}
+
+func (a *AstValTypeStruct) Debug(x uint) {
+	ident(x)
+	fmt.Printf("AstTypeStruct\n")
+	a.Item.Debug(x + 1)
+}
+
+func (a *AstValTypeStruct) Where() reporter.Where {
+	return a.Item.Where()
+}
+
+type AstValTypeEnum struct {
+	Vttype AstValTypeType
+	Item   AstNode
+}
+
+func (a *AstValTypeEnum) ANType() AstType {
+	return ANTypeEnum
+}
+
+func (a *AstValTypeEnum) Debug(x uint) {
+	ident(x)
+	fmt.Printf("AstTypeEnum\n")
+	a.Item.Debug(x + 1)
+}
+
+func (a *AstValTypeEnum) Where() reporter.Where {
+	return a.Item.Where()
+}
+*/
 type AstExpr struct {
 	Etype AstExprType
 	Item  AstNode
@@ -547,6 +625,7 @@ func (a *AstContinueStmt) Where() reporter.Where {
 }
 
 type AstUnkownType struct {
+	For reporter.Where
 	Rtype *AstValType
 }
 
@@ -563,13 +642,14 @@ func (a *AstUnkownType) Debug(x uint) {
 }
 
 func (a *AstUnkownType) Where() reporter.Where {
-	return reporter.WhereNew(1, 1, 0, 0)
+	return a.For
 }
 
-func ANTUnknownNew() AstValType {
+func ANTUnknownNew(where reporter.Where) AstValType {
 	return AstValType{
 		Vttype: ANTUnknown,
 		Item: &AstUnkownType{
+			For: where,
 			Rtype: nil,
 		},
 	}

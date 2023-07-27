@@ -162,47 +162,42 @@ func (tt *TokenType) ToString() string {
 	return TokenStringMap[*tt]
 }
 
-type TokenCastError struct {
-	token *Token
-	message string
-}
-
-func (e TokenCastError) Error() string {
-	return fmt.Sprintf("parse `%v` error: %v %v", e.token.value, e.message, e.token.where.ToString())
-}
-
-func (t *Token) AsInt() (int, error) {
+func (t *Token) AsInt(file *utils.File) int {
 	i, err := strconv.ParseInt(t.value, 10, 0)
 	if err != nil {
-		return 0, TokenCastError {
-			token: t,
-			message: err.Error(),
-		}
+		err := reporter.Error(
+			t.where,
+			fmt.Sprintf("cannot convert `%v` into a int value", t.value),
+		)
+		reporter.Report(&err, file)
 	}
-	return int(i), nil
+	return int(i)
 }
 
-func (t *Token) AsFloat() (float64, error) {
+func (t *Token) AsFloat(file *utils.File) float64 {
 	i, err := strconv.ParseFloat(t.value, 64)
 	if err != nil {
-		return 0, TokenCastError {
-			token: t,
-			message: err.Error(),
-		}
+		err := reporter.Error(
+			t.where,
+			fmt.Sprintf("cannot convert `%v` into a float value", t.value),
+		)
+		reporter.Report(&err, file)
 	}
-	return float64(i), nil
+	return float64(i)
 }
 
-func (t *Token) AsBool() (bool, error) {
+func (t *Token) AsBool(file *utils.File) bool {
 	if t.value == "true" {
-		return true, nil
+		return true
 	} else if t.value == "false" {
-		return false, nil
+		return false
 	}
-	return false, TokenCastError {
-		token: t,
-		message: fmt.Sprintf("cannot convert `%v` into boolean", t.value),
-	}
+	err := reporter.Error(
+		t.where,
+		fmt.Sprintf("cannot convert `%v` into a boolean value", t.value),
+	)
+	reporter.Report(&err, file)
+	return false
 }
 
 func (t *Token) AssertType(tt TokenType) bool {
