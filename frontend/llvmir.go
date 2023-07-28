@@ -3,6 +3,7 @@ package frontend
 import (
 	"belt/reporter"
 	"belt/utils"
+	"fmt"
 
 	"github.com/llir/llvm/ir"
 	"github.com/llir/llvm/ir/constant"
@@ -14,12 +15,14 @@ type AstLLVMBuilder struct {
 	ast AstFile
 	m *ir.Module
 	file *utils.File
+	pool map[string]*ir.Global
 }
 
 func AstLLVMBuilderNew(ast AstFile, file *utils.File) AstLLVMBuilder {
 	return AstLLVMBuilder{
 		ast: ast,
 		file: file,
+		pool: make(map[string]*ir.Global),
 	}
 }
 
@@ -56,7 +59,7 @@ func (b *AstLLVMBuilder) BuildItemGlobal(a *AstItem) {
 	}
 }
 
-func (b *AstLLVMBuilder) BuildStmtFnLocal(fn *Func, a *AstStmt) {
+func (b *AstLLVMBuilder) BuildStmtFnLocal(fn *Func, a *AstStmt) *value.Value {
 	switch a.Stype {
 	case ANSLet:
 		stmt := a.Item.(*AstLetStmt)
@@ -68,10 +71,10 @@ func (b *AstLLVMBuilder) BuildStmtFnLocal(fn *Func, a *AstStmt) {
 		}
 		fn.addIdent(stmt.Name.value, &Identifier{
 			Value: addr,
-			Type: &ty,
 		})
 	case ANSExpr:
-		b.BuildExprFnLocal(fn, a.Item.(*AstExpr))
+		val := b.BuildExprFnLocal(fn, a.Item.(*AstExpr))
+		return &val
 	case ANSReturn:
 	case ANSBreak:
 	case ANSContinue:
@@ -82,6 +85,7 @@ func (b *AstLLVMBuilder) BuildStmtFnLocal(fn *Func, a *AstStmt) {
 		)
 		reporter.Report(&err, b.file)
 	}
+	return nil
 }
 
 type Func struct {
@@ -92,7 +96,6 @@ type Func struct {
 }
 
 type Identifier struct {
-	Type  *types.Type
 	Value value.Value
 }
 
@@ -164,9 +167,11 @@ func (fn *Func) lookupIdent(name string) *Identifier {
 }
 
 func (b *AstLLVMBuilder) BuildBlockFnLocal(fn *Func, a *AstBlock) {
-	for _, item := range a.Items {
+	/*for _, item := range a.Items {
 		b.BuildStmtFnLocal(fn, &item)
-	}
+	}*/
+	block := b.BuildExprFnLocalBlock(fn, a)
+	fn.block.Term = fn.block.NewRet(block.Ret)
 }
 
 func (b *AstLLVMBuilder) BuildFnBody(fn *Func, a *AstFnDecl) {
@@ -174,14 +179,10 @@ func (b *AstLLVMBuilder) BuildFnBody(fn *Func, a *AstFnDecl) {
 		addr := b.BuildFnParam(fn.block, param)
 		fn.addIdent(param.Name(), &Identifier{
 			Value: addr,
-			Type: &param.Typ,
 		})
 	}
 
 	b.BuildBlockFnLocal(fn, &a.Body)
-	
-	term := ir.NewRet(nil)
-	fn.block.Term = term
 }
 
 func (b *AstLLVMBuilder) BuildFnParam(block *ir.Block, param *ir.Param) value.Value {
@@ -203,7 +204,7 @@ func (b *AstLLVMBuilder) BuildExprFnLocal(fn *Func, e *AstExpr) value.Value {
 	case ANEIfElse:
 		panic("not implemented yet")
 	case ANEBlock:
-		return b.BuildExprFnLocalBlock(fn, e.Item.(*AstBlock))
+		return b.BuildExprFnLocalBlock(fn, e.Item.(*AstBlock)).Ret
 	case ANEClosure:
 		return b.BuildExprFnLocalClosure(fn, e.Item.(*AstClosure))
 	case ANEFncall:
@@ -221,6 +222,28 @@ func (b *AstLLVMBuilder) BuildExprFnLocal(fn *Func, e *AstExpr) value.Value {
 	return c
 }
 
+var pool_id uint
+
+func GetPoolId() string {
+	id := fmt.Sprintf("$const_%v", pool_id)
+	pool_id += 1
+	return id
+}
+
+func (b *AstLLVMBuilder) GetFromPoolOrCreate(src constant.Constant) *ir.Global {
+	key := src.String()
+	def, ok := b.pool[key]
+	if !ok {
+		def = b.m.NewGlobalDef(GetPoolId(), src)
+		b.pool[key] = def
+	}
+	return def
+}
+
+func (b *AstLLVMBuilder) GetPool() map[string]*ir.Global {
+	return b.pool
+}
+
 func (b *AstLLVMBuilder) BuildExprFnLocalLiteral(fn *Func, e *AstExprLiteral) value.Value {
 	switch e.Value.ttype {
 	case LlBool:
@@ -233,19 +256,39 @@ func (b *AstLLVMBuilder) BuildExprFnLocalLiteral(fn *Func, e *AstExprLiteral) va
 		return constant.NewInt(types.I64, 0)
 	case LlString:
 		str := constant.NewCharArrayFromString(e.Value.value)
-		return constant.NewAddrSpaceCast(str, types.I8Ptr)
+		def := b.GetFromPoolOrCreate(str)
+		zero := constant.NewInt(types.I64, 0)
+		return constant.NewGetElementPtr(def.ContentType, def, zero, zero)
 	default:
 		panic("reaching an unreachable code! something went wrong")
 	}
 }
 
 func (b *AstLLVMBuilder) BuildExprFnLocalVar(fn *Func, e *AstExprVar) value.Value {
-	ident :=fn.lookupIdent(e.Ident.value)
-	return fn.block.NewLoad(*ident.Type, ident.Value).Src
+	ident := fn.lookupIdent(e.Ident.value)
+	return fn.block.NewLoad(ident.Value.Type().(*types.PointerType).ElemType, ident.Value)
 }
 
-func (b *AstLLVMBuilder) BuildExprFnLocalBlock(fn *Func, e *AstBlock) value.Value {
-	panic("not implemented yet")
+type Block struct {
+	Block *ir.Block
+	Ret value.Value
+}
+
+func (b *AstLLVMBuilder) BuildExprFnLocalBlock(fn *Func, e *AstBlock) Block {
+	var val *value.Value
+	var ret value.Value
+	for _, item := range e.Items {
+		val = b.BuildStmtFnLocal(fn, &item)
+	}
+	if val == nil {
+		ret = constant.NewStruct(types.NewStruct())
+	} else {
+		ret = *val
+	}
+	return Block{
+		Block: fn.block,
+		Ret: ret,
+	} 
 }
 
 func (b *AstLLVMBuilder) BuildExprFnLocalClosure(fn *Func, e *AstClosure) value.Value {

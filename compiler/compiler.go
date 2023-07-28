@@ -29,5 +29,6 @@ func CompileFile(path string) {
 	ast := parser.ParseFile()
 	ast.Debug(0)
 	builder := frontend.AstLLVMBuilderNew(ast, &file)
-	fmt.Printf("%v", builder.Build())
+	ir := builder.Build()
+	fmt.Printf("%v\n", ir)
 }

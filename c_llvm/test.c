@@ -1,4 +1,6 @@
-int add(int a, int b)
+int main()
 {
-    return a + b;
+    int a = 72;
+    puts(a);
+    return a;
 }
