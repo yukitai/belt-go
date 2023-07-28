@@ -1,8 +1,7 @@
 fn get_string() -> string {
     let a: string = "Hello, World!"
-    let b: string = "Hello, World!\n"
-    let c: string = "Hello, World!"
-    let d: string = "hello world"
-    let e: string = "Hello, World!"
+    let b: int = 114
+    let c: int = 514
+    let d: int = b * 1000 + c
     a
 }

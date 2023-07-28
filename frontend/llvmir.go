@@ -7,20 +7,21 @@ import (
 
 	"github.com/llir/llvm/ir"
 	"github.com/llir/llvm/ir/constant"
+	"github.com/llir/llvm/ir/enum"
 	"github.com/llir/llvm/ir/types"
 	"github.com/llir/llvm/ir/value"
 )
 
 type AstLLVMBuilder struct {
-	ast AstFile
-	m *ir.Module
+	ast  AstFile
+	m    *ir.Module
 	file *utils.File
 	pool map[string]*ir.Global
 }
 
 func AstLLVMBuilderNew(ast AstFile, file *utils.File) AstLLVMBuilder {
 	return AstLLVMBuilder{
-		ast: ast,
+		ast:  ast,
 		file: file,
 		pool: make(map[string]*ir.Global),
 	}
@@ -101,9 +102,9 @@ type Identifier struct {
 
 func FuncNew(fn *ir.Func, params []*ir.Param) Func {
 	return Func{
-		fn: fn,
+		fn:     fn,
 		params: params,
-		block: fn.NewBlock("entry"),
+		block:  fn.NewBlock("entry"),
 		idents: make(map[string]*Identifier, 0),
 	}
 }
@@ -271,7 +272,7 @@ func (b *AstLLVMBuilder) BuildExprFnLocalVar(fn *Func, e *AstExprVar) value.Valu
 
 type Block struct {
 	Block *ir.Block
-	Ret value.Value
+	Ret   value.Value
 }
 
 func (b *AstLLVMBuilder) BuildExprFnLocalBlock(fn *Func, e *AstBlock) Block {
@@ -287,8 +288,8 @@ func (b *AstLLVMBuilder) BuildExprFnLocalBlock(fn *Func, e *AstBlock) Block {
 	}
 	return Block{
 		Block: fn.block,
-		Ret: ret,
-	} 
+		Ret:   ret,
+	}
 }
 
 func (b *AstLLVMBuilder) BuildExprFnLocalClosure(fn *Func, e *AstClosure) value.Value {
@@ -304,5 +305,60 @@ func (b *AstLLVMBuilder) BuildExprFnLocalOp1(fn *Func, e *AstExprOp1) value.Valu
 }
 
 func (b *AstLLVMBuilder) BuildExprFnLocalOp2(fn *Func, e *AstExprOp2) value.Value {
-	panic("not implemented yet")
+	lhs := b.BuildExprFnLocal(fn, &e.Lhs)
+	rhs := b.BuildExprFnLocal(fn, &e.Rhs)
+	switch e.Op.ttype {
+	case OAdd:
+		return fn.block.NewAdd(lhs, rhs)
+	case OAddf:
+		return fn.block.NewFAdd(lhs, rhs)
+	case OConnect:
+		panic("not implemented yet")
+	case OSub:
+		return fn.block.NewSub(lhs, rhs)
+	case OSubf:
+		return fn.block.NewFSub(lhs, rhs)
+	case OMul:
+		return fn.block.NewMul(lhs, rhs)
+	case OMulf:
+		return fn.block.NewFMul(lhs, rhs)
+	case ODiv:
+		return fn.block.NewSDiv(lhs, rhs)
+	case ODivf:
+		return fn.block.NewFDiv(lhs, rhs)
+	case OEq:
+		return fn.block.NewICmp(enum.IPredEQ, lhs, rhs)
+	case ONeq:
+		return fn.block.NewICmp(enum.IPredNE, lhs, rhs)
+	case OGrt:
+		return fn.block.NewICmp(enum.IPredSGT, lhs, rhs)
+	case OGeq:
+		return fn.block.NewICmp(enum.IPredSGE, lhs, rhs)
+	case OLes:
+		return fn.block.NewICmp(enum.IPredSLT, lhs, rhs)
+	case OLeq:
+		return fn.block.NewICmp(enum.IPredSLE, lhs, rhs)
+	case OAnd:
+		return fn.block.NewAnd(lhs, rhs)
+	case OOr:
+		return fn.block.NewOr(lhs, rhs)
+	case OBXor:
+		return fn.block.NewXor(lhs, rhs)
+	case OBAnd:
+		panic("not implemented yet")
+	case OBOr:
+		panic("not implemented yet")
+	case OMovl:
+		panic("not implemented yet")
+	case OMovr:
+		panic("not implemented yet")
+	case OMember:
+		panic("not implemented yet")
+	case OLookup:
+		panic("not implemented yet")
+	case OAssign:
+		panic("not implemented yet")
+	default:
+		panic("reaching an unreachable code! something went wrong")
+	}
 }
