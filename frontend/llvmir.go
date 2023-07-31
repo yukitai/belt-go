@@ -13,17 +13,19 @@ import (
 )
 
 type AstLLVMBuilder struct {
-	ast  AstFile
-	m    *ir.Module
-	file *utils.File
-	pool map[string]*ir.Global
+	ast      AstFile
+	m        *ir.Module
+	file     *utils.File
+	pool     map[string]*ir.Global
+	builtins map[string]*ir.Func
 }
 
 func AstLLVMBuilderNew(ast AstFile, file *utils.File) AstLLVMBuilder {
 	return AstLLVMBuilder{
-		ast:  ast,
-		file: file,
-		pool: make(map[string]*ir.Global),
+		ast:      ast,
+		file:     file,
+		pool:     make(map[string]*ir.Global),
+		builtins: make(map[string]*ir.Func),
 	}
 }
 
@@ -32,9 +34,13 @@ func (b *AstLLVMBuilder) Build() *ir.Module {
 	b.m = m
 
 	builtins := map[string]*ir.Func{}
+	b.builtins = builtins
 
 	// extern functions
-	builtins["puts"] = m.NewFunc("puts", types.I32, ir.NewParam("", types.NewPointer(types.I8)))
+	builtins["puts"] = m.NewFunc("puts", types.I32, ir.NewParam("", types.I8Ptr))
+
+	// bl_builtins
+	builtins["__bl_str_connect"] = m.NewFunc("__bl_str_connect", types.I8Ptr, ir.NewParam("", types.I8Ptr), ir.NewParam("", types.I8Ptr))
 
 	b.BuildFile(&b.ast)
 
@@ -313,7 +319,7 @@ func (b *AstLLVMBuilder) BuildExprFnLocalOp2(fn *Func, e *AstExprOp2) value.Valu
 	case OAddf:
 		return fn.block.NewFAdd(lhs, rhs)
 	case OConnect:
-		panic("not implemented yet")
+		return fn.block.NewCall(b.builtins["__bl_str_connect"], lhs, rhs)
 	case OSub:
 		return fn.block.NewSub(lhs, rhs)
 	case OSubf:

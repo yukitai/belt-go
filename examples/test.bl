@@ -1,7 +1,19 @@
-fn get_string() -> string {
-    let a: string = "Hello, World!"
-    let b: int = 114
-    let c: int = 514
-    let d: int = b * 1000 + c
+fn get_string() {
+    let a = "Hello, " ++ "World!\n"
+    let b = 114
+    let c = 514
+    let d = b * 1000 + c
     a
+}
+
+fn test_tyinfer(a: int, b: float) -> bool {
+    let r
+    let x
+    let y
+    let xx = x + a
+    let yy = y + b
+    let c
+    let d
+    let e: string = c ++ d
+    r
 }

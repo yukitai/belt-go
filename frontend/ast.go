@@ -39,6 +39,8 @@ const (
 	ANTypeVar
 	ANTypeStruct
 	ANTypeEnum
+	ANTypeFnType
+	ANTypeTuple
 
 	ANBlock
 )
@@ -68,6 +70,9 @@ const (
 	ANTUnknown
 	ANTStruct
 	ANTEnum
+	ANTFnType
+	ANTTuple
+	// ANTTuple
 )
 
 type AstStmtType int
@@ -234,6 +239,15 @@ func (a *AstValType) Where() reporter.Where {
 	return a.Item.Where()
 }
 
+func (a *AstValType) IsLlType() bool {
+	switch a.Vttype {
+	case ANTBinary, ANTTuple:
+		return true
+	default:
+		return false
+	}
+}
+
 type AstValTypeBinary struct {
 	Tok_type *Token
 }
@@ -271,7 +285,10 @@ func (a *AstValTypeVar) Debug(x uint) {
 }
 
 func (a *AstValTypeVar) Where() reporter.Where {
-	return a.Ident.where
+	if a.Ident != nil {
+		return a.Ident.Where()
+	}
+	return reporter.FakeWhere()
 }
 /*
 type AstValTypeStruct struct {
@@ -312,6 +329,75 @@ func (a *AstValTypeEnum) Where() reporter.Where {
 	return a.Item.Where()
 }
 */
+
+type AstValTypeFnType struct {
+	Tok_fn      *Token
+	Tok_lbrace  *Token
+	Types       []AstValType
+	Tok_rbrace  *Token
+	Tok_thinarr *Token
+	Ret_t       AstValType
+}
+
+func (a *AstValTypeFnType) ANType() AstType {
+	return ANTypeFnType
+}
+
+func (a *AstValTypeFnType) Debug(x uint) {
+	ident(x)
+	fmt.Printf("AstTypeFnType\n")
+	debug_token(x + 1, a.Tok_fn)
+	debug_token(x + 1, a.Tok_lbrace)
+	ident(x + 1)
+	fmt.Printf("Arguments\n")
+	for _, item := range a.Types {
+		item.Debug(x + 2)
+	}
+	debug_token(x + 1, a.Tok_rbrace)
+	debug_token(x + 1, a.Tok_thinarr)
+	a.Ret_t.Debug(x + 1)
+}
+
+func (a *AstValTypeFnType) Where() reporter.Where {
+	ty := a.Ret_t.Where()
+	return a.Tok_fn.where.Merge(&ty)
+}
+
+type AstValTypeTuple struct {
+	Tok_lbrace  *Token
+	Types       []AstValType
+	Tok_rbrace  *Token
+}
+
+func AstTupleNew(types ...AstValType) AstValType {
+	return AstValType{
+		Vttype: ANTTuple,
+		Item: &AstValTypeTuple{
+			Types: types,
+		},
+	}
+}
+
+func (a *AstValTypeTuple) ANType() AstType {
+	return ANTypeTuple
+}
+
+func (a *AstValTypeTuple) Debug(x uint) {
+	ident(x)
+	fmt.Printf("AstTypeTuple\n")
+	debug_token(x + 1, a.Tok_lbrace)
+	ident(x + 1)
+	fmt.Printf("Types\n")
+	for _, item := range a.Types {
+		item.Debug(x + 2)
+	}
+	debug_token(x + 1, a.Tok_rbrace)
+}
+
+func (a *AstValTypeTuple) Where() reporter.Where {
+	return a.Tok_lbrace.where.Merge(&a.Tok_rbrace.where)
+}
+
 type AstExpr struct {
 	Etype AstExprType
 	Item  AstNode
