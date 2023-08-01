@@ -89,51 +89,59 @@ func (i *TyInfer) InferStmt(ufs *UnionFindSet, idents map[string]uint, stmt *Ast
 	}
 }
 
+var type_int = AstValType{
+	Vttype: ANTBinary,
+	Item: &AstValTypeBinary{
+		Tok_type: &Token{
+			ttype: KTInt,
+			value: "int",
+		},
+	},
+}
+
+var type_float = AstValType{
+	Vttype: ANTBinary,
+	Item: &AstValTypeBinary{
+		Tok_type: &Token{
+			ttype: KTFloat,
+			value: "float",
+		},
+	},
+}
+
+var type_bool = AstValType{
+	Vttype: ANTBinary,
+	Item: &AstValTypeBinary{
+		Tok_type: &Token{
+			ttype: KTBool,
+			value: "bool",
+		},
+	},
+}
+
+var type_string = AstValType{
+	Vttype: ANTBinary,
+	Item: &AstValTypeBinary{
+		Tok_type: &Token{
+			ttype: KTString,
+			value: "string",
+		},
+	},
+}
+
 func (i *TyInfer) InferExpr(ufs *UnionFindSet, idents map[string]uint, expr *AstExpr) uint {
 	switch expr.Etype {
 	case ANELiteral:
 		expr := expr.Item.(*AstExprLiteral)
 		switch expr.Value.ttype {
 		case LlInt:
-			return ufs.Extend(&AstValType{
-				Vttype: ANTBinary,
-				Item: &AstValTypeBinary{
-					Tok_type: &Token{
-						ttype: KTInt,
-						value: "int",
-					},
-				},
-			})
+			return ufs.Extend(&type_int)
 		case LlFloat:
-			return ufs.Extend(&AstValType{
-				Vttype: ANTBinary,
-				Item: &AstValTypeBinary{
-					Tok_type: &Token{
-						ttype: KTFloat,
-						value: "float",
-					},
-				},
-			})
+			return ufs.Extend(&type_float)
 		case LlBool:
-			return ufs.Extend(&AstValType{
-				Vttype: ANTBinary,
-				Item: &AstValTypeBinary{
-					Tok_type: &Token{
-						ttype: KTBool,
-						value: "bool",
-					},
-				},
-			})
+			return ufs.Extend(&type_bool)
 		case LlString:
-			return ufs.Extend(&AstValType{
-				Vttype: ANTBinary,
-				Item: &AstValTypeBinary{
-					Tok_type: &Token{
-						ttype: KTString,
-						value: "string",
-					},
-				},
-			})
+			return ufs.Extend(&type_string)
 		default:
 			panic("reaching an unreachable code! something went wrong")
 		}
@@ -156,11 +164,35 @@ func (i *TyInfer) InferExpr(ufs *UnionFindSet, idents map[string]uint, expr *Ast
 		panic("not implemented yet")
 	case ANEOp2:
 		expr := expr.Item.(*AstExprOp2)
-		expr_t := ufs.ExtendTVar()
 		lhs_t := i.InferExpr(ufs, idents, &expr.Lhs)
 		rhs_t := i.InferExpr(ufs, idents, &expr.Rhs)
-		ufs.Merge(lhs_t, rhs_t)
-		ufs.Merge(expr_t, lhs_t)
+		var expr_t uint
+		switch expr.Op.ttype {
+		case OAdd, OSub, OMul, ODiv:
+			ufs.Merge(lhs_t, rhs_t)
+			expr_t = ufs.Extend(&type_int)
+			ufs.Merge(expr_t, lhs_t)
+		case OAddf, OSubf, OMulf, ODivf:
+			ufs.Merge(lhs_t, rhs_t)
+			expr_t = ufs.Extend(&type_float)
+			ufs.Merge(expr_t, lhs_t)
+		case OConnect:
+			ufs.Merge(lhs_t, rhs_t)
+			expr_t = ufs.Extend(&type_string)
+			ufs.Merge(expr_t, lhs_t)
+		case OEq, ONeq, OGrt, OGeq, OLes, OLeq:
+			ufs.Merge(lhs_t, rhs_t)
+			expr_t = ufs.Extend(&type_bool)
+		case OAnd, OOr:
+			ufs.Merge(lhs_t, rhs_t)
+			expr_t = ufs.Extend(&type_bool)
+			ufs.Merge(expr_t, lhs_t)
+		case OAssign:
+			expr_t = ufs.ExtendTVar()
+			ufs.Merge(expr_t, rhs_t)
+		default:
+			panic("not implemented yet")
+		}
 		return expr_t
 	default:
 		panic("not implemented yet")

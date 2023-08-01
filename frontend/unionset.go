@@ -6,16 +6,18 @@ import (
 )
 
 type UnionFindSet struct {
-	parents []uint
-	ranks   []uint
-	values  []*AstValType
+	parents  []uint
+	ranks    []uint
+	values   []*AstValType
+	typevars map[string]uint
 }
 
 func UFSNew() UnionFindSet {
 	return UnionFindSet{
-		parents: make([]uint, 0),
-		ranks: make([]uint, 0),
-		values: make([]*AstValType, 0),
+		parents:  make([]uint, 0),
+		ranks:    make([]uint, 0),
+		values:   make([]*AstValType, 0),
+		typevars: make(map[string]uint),
 	}
 }
 
@@ -46,6 +48,19 @@ func (ufs *UnionFindSet) Merge(a uint, b uint) {
 }
 
 func (ufs *UnionFindSet) Extend(value *AstValType) uint {
+	if value.Vttype == ANTVar {
+		tvarname := value.Item.(*AstValTypeVar).Ident.value
+		tvar, ok := ufs.typevars[tvarname]
+		if ok {
+			return tvar
+		}
+		size := uint(len(ufs.values))
+		ufs.parents = append(ufs.parents, size)
+		ufs.ranks = append(ufs.ranks, 0)
+		ufs.values = append(ufs.values, value)
+		ufs.typevars[tvarname] = size
+		return size
+	}
 	size := uint(len(ufs.values))
 	ufs.parents = append(ufs.parents, size)
 	ufs.ranks = append(ufs.ranks, 0)
@@ -69,7 +84,19 @@ func (ufs *UnionFindSet) MakeEffect(a *Analyzer) {
 		ty := *ufs.values[t]
 		if ty.IsLlType() {
 			if item.IsLlType() {
-				// todo compare two types
+				where := item.Where()
+				if !where.IsFake() {
+					lt := item.ToString()
+					rt := ty.ToString()
+					if lt != rt {
+						err := reporter.Error(
+							where,
+							fmt.Sprintf("mismatched type %v and type %v", lt, rt),
+						)
+						reporter.Report(&err, a.file)
+						a.has_err = true
+					}
+				}
 			} else {
 				*item = ty
 			}
@@ -78,7 +105,7 @@ func (ufs *UnionFindSet) MakeEffect(a *Analyzer) {
 			if !where.IsFake() {
 				err := reporter.Error(
 					where,
-					fmt.Sprintf("type %v cannot be known at the compile time", ty),
+					fmt.Sprintf("type %v cannot be known at the compile time", item.ToString()),
 				)
 				reporter.Report(&err, a.file)
 				a.has_err = true

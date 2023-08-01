@@ -6,14 +6,16 @@ fn get_string() {
     a
 }
 
-fn test_tyinfer(a: int, b: float) -> bool {
+fn test_tyinfer() -> bool {
+    let a: 'a
+    let b: 'a
     let r
     let x
     let y
-    let xx = x + a
-    let yy = y + b
+    let xx = x +  a
+    let yy = y +. b
     let c
     let d
-    let e: string = c ++ d
+    let e  = c ++ d
     r
 }

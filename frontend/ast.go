@@ -220,9 +220,14 @@ func (a *AstFnArg) Where() reporter.Where {
 	return a.Name.where
 }
 
+type AstValTypeTrait interface {
+	AstNode
+	ToString() string
+}
+
 type AstValType struct {
 	Vttype AstValTypeType
-	Item   AstNode
+	Item   AstValTypeTrait
 }
 
 func (a *AstValType) ANType() AstType {
@@ -248,6 +253,10 @@ func (a *AstValType) IsLlType() bool {
 	}
 }
 
+func (a *AstValType) ToString() string {
+	return a.Item.ToString()
+}
+
 type AstValTypeBinary struct {
 	Tok_type *Token
 }
@@ -264,6 +273,10 @@ func (a *AstValTypeBinary) Debug(x uint) {
 
 func (a *AstValTypeBinary) Where() reporter.Where {
 	return a.Tok_type.where
+}
+
+func (a *AstValTypeBinary) ToString() string {
+	return a.Tok_type.value
 }
 
 type AstValTypeVar struct {
@@ -290,10 +303,14 @@ func (a *AstValTypeVar) Where() reporter.Where {
 	}
 	return reporter.FakeWhere()
 }
+
+func (a *AstValTypeVar) ToString() string {
+	return a.Ident.value
+}
 /*
 type AstValTypeStruct struct {
 	Vttype AstValTypeType
-	Item   AstNode
+	Item   AstValTypeTrait
 }
 
 func (a *AstValTypeStruct) ANType() AstType {
@@ -312,7 +329,7 @@ func (a *AstValTypeStruct) Where() reporter.Where {
 
 type AstValTypeEnum struct {
 	Vttype AstValTypeType
-	Item   AstNode
+	Item   AstValTypeTrait
 }
 
 func (a *AstValTypeEnum) ANType() AstType {
@@ -363,6 +380,10 @@ func (a *AstValTypeFnType) Where() reporter.Where {
 	return a.Tok_fn.where.Merge(&ty)
 }
 
+func (a *AstValTypeFnType) ToString() string {
+	return fmt.Sprintf("Fn(%v) -> %v", AstValTypeListToString(&a.Types), a.Ret_t.ToString())
+}
+
 type AstValTypeTuple struct {
 	Tok_lbrace  *Token
 	Types       []AstValType
@@ -395,7 +416,27 @@ func (a *AstValTypeTuple) Debug(x uint) {
 }
 
 func (a *AstValTypeTuple) Where() reporter.Where {
-	return a.Tok_lbrace.where.Merge(&a.Tok_rbrace.where)
+	if a.Tok_lbrace != nil {
+		return a.Tok_lbrace.where.Merge(&a.Tok_rbrace.where)
+	} else {
+		return reporter.FakeWhere()
+	}
+}
+
+func (a *AstValTypeTuple) ToString() string {
+	if len(a.Types) < 2 {
+		return fmt.Sprintf("(%v,)", AstValTypeListToString(&a.Types))
+	} else {
+		return fmt.Sprintf("(%v)", AstValTypeListToString(&a.Types))
+	}
+}
+
+func AstValTypeListToString(l *[]AstValType) string {
+	parts := make([]string, len(*l))
+	for _, part := range *l {
+		parts = append(parts, part.ToString())
+	}
+	return strings.Join(parts, ", ")
 }
 
 type AstExpr struct {
@@ -729,6 +770,10 @@ func (a *AstUnkownType) Debug(x uint) {
 
 func (a *AstUnkownType) Where() reporter.Where {
 	return a.For
+}
+
+func (a *AstUnkownType) ToString() string {
+	return "_"
 }
 
 func ANTUnknownNew(where reporter.Where) AstValType {
