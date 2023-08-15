@@ -24,6 +24,9 @@ const (
 	ANExprLiteral
 	ANExprVar
 	ANExprFncall
+	ANExprForIn
+	ANExprIfElse
+	ANExprWhile
 	ANExprBuiltinCorePrint
 
 	ANStmt
@@ -535,6 +538,62 @@ func (a *AstExprVar) Debug(x uint) {
 
 func (a *AstExprVar) Where() reporter.Where {
 	return a.Ident.Where()
+}
+
+type AstExprIfElse struct {
+	Tok_if   *Token
+	Cond     AstExpr
+	Case1    AstBlock
+	Tok_else *Token
+	Case2    *AstBlock
+	
+	Type     AstValType
+}
+
+func (a *AstExprIfElse) ANType() AstType {
+	return ANExprVar
+}
+
+func (a *AstExprIfElse) Debug(x uint) {
+	ident(x)
+	fmt.Printf("AstExprIfElse\n")
+	debug_token(x + 1, a.Tok_if)
+	a.Cond.Debug(x + 1)
+	a.Case1.Debug(x + 1)
+	if a.Tok_else != nil {
+		debug_token(x + 1, a.Tok_else)
+		a.Case2.Debug(x + 1)
+	}
+}
+
+func (a *AstExprIfElse) Where() reporter.Where {
+	case1 := a.Case1.Where()
+	case2 := a.Case2.Where()
+	ifelse := a.Tok_if.where.Merge(&case2)
+	return (&ifelse).Merge(&case1)
+}
+
+type AstExprWhile struct {
+	Tok_while *Token
+	Cond      AstExpr
+	Body     AstBlock
+}
+
+func (a *AstExprWhile) ANType() AstType {
+	return ANExprVar
+}
+
+func (a *AstExprWhile) Debug(x uint) {
+	ident(x)
+	fmt.Printf("AstExprWhile\n")
+	debug_token(x + 1, a.Tok_while)
+	a.Cond.Debug(x + 1)
+	a.Body.Debug(x + 1)
+}
+
+func (a *AstExprWhile) Where() reporter.Where {
+	body := a.Body.Where()
+	return a.Tok_while.where.Merge(&body)
 }
 
 type AstExprFncall struct {

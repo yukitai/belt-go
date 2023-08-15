@@ -49,9 +49,13 @@ func (i *TyInfer) InferAll() {
 
 func (i *TyInfer) InferFunc(fn *AstFnDecl) {
 	ufs := UFSNew()
-	unit := AstTupleNew()
-	last := ufs.Extend(&unit) // Empty Ret Type
-	ret_t := ufs.Extend(&fn.Ret_t)
+	last := ufs.Extend(&type_unit) // Empty Ret Type
+	var ret_t uint
+	//if fn.Ret_t.Vttype == ANTUnknown {
+	//	ret_t = ufs.Extend(&type_unit)
+	//} else {
+		ret_t = ufs.Extend(&fn.Ret_t)
+	//}
 	idents := map[string]uint{
 		"$$ret": ret_t,
 	}
@@ -129,6 +133,21 @@ var type_string = AstValType{
 	},
 }
 
+var type_unit = AstValType{
+	Vttype: ANTBinary,
+	Item: &AstValTypeTuple{
+		Types: make([]AstValType, 0),
+	},
+}
+
+func (i *TyInfer) InferBlock(ufs *UnionFindSet, idents map[string]uint, block *AstBlock) uint {
+	last := ufs.Extend(&type_unit)
+	for _, item := range block.Items {
+		last = i.InferStmt(ufs, idents, &item)
+	}
+	return last
+}
+
 func (i *TyInfer) InferExpr(ufs *UnionFindSet, idents map[string]uint, expr *AstExpr) uint {
 	switch expr.Etype {
 	case ANELiteral:
@@ -194,6 +213,32 @@ func (i *TyInfer) InferExpr(ufs *UnionFindSet, idents map[string]uint, expr *Ast
 			panic("not implemented yet")
 		}
 		return expr_t
+	case ANEWhile:
+		expr := expr.Item.(*AstExprWhile)
+		ty_bool := ufs.Extend(&type_bool)
+		cond_t := i.InferExpr(ufs, idents, &expr.Cond)
+		ufs.Merge(cond_t, ty_bool)
+		return ufs.Extend(&type_unit)
+	case ANEBlock:
+		expr := expr.Item.(*AstBlock)
+		block_t := i.InferBlock(ufs, idents, expr)
+		return block_t
+	case ANEIfElse:
+		expr := expr.Item.(*AstExprIfElse)
+		ty_bool := ufs.Extend(&type_bool)
+		cond_t := i.InferExpr(ufs, idents, &expr.Cond)
+		ufs.Merge(cond_t, ty_bool)
+		case1_t := i.InferBlock(ufs, idents, &expr.Case1)
+		var case2_t uint
+		if expr.Case2 == nil {
+			case2_t = ufs.Extend(&type_unit)
+		} else {
+			case2_t = i.InferBlock(ufs, idents, expr.Case2)
+		}
+		ufs.Merge(case1_t, case2_t)
+		ifelse_t := ufs.Extend(&expr.Type)
+		ufs.Merge(case1_t, ifelse_t)
+		return ifelse_t
 	default:
 		panic("not implemented yet")
 	}

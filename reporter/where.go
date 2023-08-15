@@ -44,7 +44,7 @@ func (w *Where) Clone() Where {
 
 func (w1 *Where) Merge(w2 *Where) Where {
 	if w2 == nil {
-		return w2.Clone()
+		return w1.Clone()
 	}
 	line1 := min(w1.line1, w2.line1)
 	line2 := max(w1.line2, w2.line2)

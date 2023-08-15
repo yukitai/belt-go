@@ -83,6 +83,11 @@ func (b *AstLLVMBuilder) BuildStmtFnLocal(fn *Func, a *AstStmt) *value.Value {
 		val := b.BuildExprFnLocal(fn, a.Item.(*AstExpr))
 		return &val
 	case ANSReturn:
+		stmt := a.Item.(*AstReturnStmt)
+		ret := b.BuildExprFnLocal(fn, &stmt.Expr)
+		fn.block.Term = &ir.TermRet{
+			X: ret,
+		}
 	case ANSBreak:
 	case ANSContinue:
 	default:
@@ -173,12 +178,12 @@ func (fn *Func) lookupIdent(name string) *Identifier {
 	return it
 }
 
-func (b *AstLLVMBuilder) BuildBlockFnLocal(fn *Func, a *AstBlock) {
+func (b *AstLLVMBuilder) BuildBlockFnLocal(fn *Func, a *AstBlock) value.Value {
 	/*for _, item := range a.Items {
 		b.BuildStmtFnLocal(fn, &item)
 	}*/
 	block := b.BuildExprFnLocalBlock(fn, a)
-	fn.block.Term = fn.block.NewRet(block.Ret)
+	return block.Ret
 }
 
 func (b *AstLLVMBuilder) BuildFnBody(fn *Func, a *AstFnDecl) {
@@ -189,7 +194,8 @@ func (b *AstLLVMBuilder) BuildFnBody(fn *Func, a *AstFnDecl) {
 		})
 	}
 
-	b.BuildBlockFnLocal(fn, &a.Body)
+	ret := b.BuildBlockFnLocal(fn, &a.Body)
+	fn.block.Term = ir.NewRet(ret)
 }
 
 func (b *AstLLVMBuilder) BuildFnParam(block *ir.Block, param *ir.Param) value.Value {
@@ -209,7 +215,7 @@ func (b *AstLLVMBuilder) BuildExprFnLocal(fn *Func, e *AstExpr) value.Value {
 	case ANEOp2:
 		return b.BuildExprFnLocalOp2(fn, e.Item.(*AstExprOp2))
 	case ANEIfElse:
-		panic("not implemented yet")
+		return b.BuildExprFnLocalIfElse(fn, e.Item.(*AstExprIfElse))
 	case ANEBlock:
 		return b.BuildExprFnLocalBlock(fn, e.Item.(*AstBlock)).Ret
 	case ANEClosure:
@@ -219,7 +225,7 @@ func (b *AstLLVMBuilder) BuildExprFnLocal(fn *Func, e *AstExpr) value.Value {
 	case ANEForIn:
 		panic("not implemented yet")
 	case ANEWhile:
-		panic("not implemented yet")
+		return b.BuildExprFnLocalWhile(fn, e.Item.(*AstExprWhile))
 	case ANEGroup:
 		return b.BuildExprFnLocal(fn, &e.Item.(*AstExprGroup).Expr)
 	case ANEBuiltinCorePrint:
@@ -367,4 +373,38 @@ func (b *AstLLVMBuilder) BuildExprFnLocalOp2(fn *Func, e *AstExprOp2) value.Valu
 	default:
 		panic("reaching an unreachable code! something went wrong")
 	}
+}
+
+func (b *AstLLVMBuilder) BuildExprFnLocalIfElse(fn *Func, e *AstExprIfElse) value.Value {
+	if e.Case2 == nil {
+		return b.BuildExprFnLocalIf(fn, e)
+	}
+	cond := b.BuildExprFnLocal(fn, &e.Cond)
+	case1 := fn.fn.NewBlock("ifelse_true_case")
+	case2 := fn.fn.NewBlock("ifelse_false_case")
+	fn.block.Term = ir.NewCondBr(cond, case1, case2)
+	outer := fn.fn.NewBlock("ifelse_outer")
+	case1.Term = &ir.TermBr{
+		Target: outer,
+	}
+	case2.Term = &ir.TermBr{
+		Target: outer,
+	}
+	ret := fn.block.NewAlloca(b.BuildType(&e.Type))
+	fn.block = case1
+	case1_val := b.BuildBlockFnLocal(fn, &e.Case1)
+	fn.block.NewStore(case1_val, ret)
+	fn.block = case2
+	case2_val := b.BuildBlockFnLocal(fn, e.Case2)
+	fn.block.NewStore(case2_val, ret)
+	fn.block = outer
+	return ret
+}
+
+func (b *AstLLVMBuilder) BuildExprFnLocalIf(fn *Func, e *AstExprIfElse) value.Value {
+	panic("not implemented yet")
+}
+
+func (b *AstLLVMBuilder) BuildExprFnLocalWhile(fn *Func, e *AstExprWhile) value.Value {
+	panic("not implemented yet")
 }

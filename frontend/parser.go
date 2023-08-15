@@ -462,7 +462,39 @@ func (p *Parser) ParseExprBinary() AstExpr {
 			Etype: ANEClosure,
 			Item: &closure,
 		}
-	case BSCorePrint:
+	case KIf:
+		cond := p.ParseExpr()
+		case1 := p.ParseBlock()
+		tok_else := p.tokens.AssertNext(KElse)
+		var case2 *AstBlock
+		if tok_else != nil {
+			_case2 := p.ParseBlock()
+			case2 = &_case2
+		}
+		return AstExpr{
+			Etype: ANEIfElse,
+			Item: &AstExprIfElse{
+				Tok_if: tok,
+				Cond: cond,
+				Case1: case1,
+				Tok_else: tok_else,
+				Case2: case2,
+				Type: ANTUnknownNew(tok.where),
+			},
+		}
+	case KWhile:
+		cond := p.ParseExpr()
+		body := p.ParseBlock()
+		return AstExpr{
+			Etype: ANEWhile,
+			Item: &AstExprWhile{
+				Tok_while: tok,
+				Cond: cond,
+				Body: body,
+			},
+		}
+	// case KFor:
+	/*case BSCorePrint:
 		tok_kcoreprint := tok
 		expr := p.ParseExpr()
 		return AstExpr{
@@ -471,7 +503,7 @@ func (p *Parser) ParseExprBinary() AstExpr {
 				Tok_kcoreprint: tok_kcoreprint,
 				Expr: expr,
 			},
-		}
+		}*/
 	default:
 		err := reporter.Error(
 			tok.where,

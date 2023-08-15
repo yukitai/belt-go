@@ -1,4 +1,4 @@
-fn get_string() {
+fn get_string() -> string {
     let a = "Hello, " ++ "World!\n"
     let b = 114
     let c = 514
@@ -7,8 +7,8 @@ fn get_string() {
 }
 
 fn test_tyinfer() -> bool {
-    let a: 'a
-    let b: 'a
+    let a
+    let b
     let r
     let x
     let y
@@ -18,4 +18,13 @@ fn test_tyinfer() -> bool {
     let d
     let e  = c ++ d
     r
+}
+
+fn test_ifelse() -> int {
+    let i = 0
+    if i == 0 {
+        0
+    } else {
+        1
+    }
 }
